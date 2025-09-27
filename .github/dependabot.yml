@@ -14,10 +14,12 @@ updates:
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: "weekly"
 
   - package-ecosystem: docker
     directory: /
+    versioning-strategy: increase-if-necessary
     schedule:
       interval: daily
