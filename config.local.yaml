@@ -4,17 +4,21 @@ jobs:
   - name: echo
     tasks:
       - command: |
-          echo "env: {{ env "COLE" }}"
+          {{- if .params }}
+          echo "params: {{ .params.test | first | default "" }}"
+          {{- else }}
+          echo "params: "
+          {{- end }}
         env:
           SHELL: /bin/sh
           COLE: test
-        connections:
-          - image: "library/alpine"
+        # connections:
+        #   - image: "library/alpine"
 
     events:
       # - cron: "0 * * * * *"
       # - interval: 5s
       - on-init: true
-      # - web-event: test
+      - web-event: test
       # - docker:
       #     image: nginx

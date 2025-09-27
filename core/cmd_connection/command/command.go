@@ -7,12 +7,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fmotalleb/go-tools/template"
 	"github.com/sirupsen/logrus"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/core/utils"
 	"github.com/FMotalleb/crontab-go/ctxutils"
-	"github.com/FMotalleb/crontab-go/template"
 )
 
 type Ctx struct {

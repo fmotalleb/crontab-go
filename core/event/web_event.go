@@ -33,11 +33,12 @@ func NewWebEventListener(event string) abstraction.EventGenerator {
 func (w *WebEventListener) BuildTickChannel() abstraction.EventChannel {
 	notifyChan := make(abstraction.EventEmitChannel)
 	global.CTX().AddEventListener(
-		w.event, func() {
+		w.event, func(params map[string]any) {
 			notifyChan <- NewMetaData(
 				"web",
 				map[string]any{
-					"event": w.event,
+					"event":  w.event,
+					"params": params,
 				})
 		},
 	)

@@ -24,7 +24,7 @@ func CTX() *Context {
 var c = newGlobalContext()
 
 type (
-	EventListenerMap = map[string][]func()
+	EventListenerMap = map[string][]func(map[string]any)
 	Context          struct {
 		context.Context
 		lock          *sync.RWMutex
@@ -54,7 +54,7 @@ func (c *Context) EventListeners() EventListenerMap {
 	return listeners.(EventListenerMap)
 }
 
-func (c *Context) AddEventListener(event string, listener func()) {
+func (c *Context) AddEventListener(event string, listener func(map[string]any)) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	listeners := c.Value(ctxutils.EventListeners).(EventListenerMap)

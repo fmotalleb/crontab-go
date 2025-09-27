@@ -19,6 +19,12 @@ func NewEventDispatchEndpoint() *EventDispatchEndpoint {
 
 func (ed *EventDispatchEndpoint) Endpoint(c *gin.Context) {
 	event := c.Param("event")
+
+	metaData := make(map[string]any)
+	for key, values := range c.Request.URL.Query() {
+		metaData[key] = values
+	}
+
 	listeners := global.CTX().EventListeners()[event]
 	if len(listeners) == 0 {
 		c.String(http.StatusNotFound, fmt.Sprintf("event: '%s' not found", event))
@@ -41,7 +47,7 @@ func (ed *EventDispatchEndpoint) Endpoint(c *gin.Context) {
 		},
 	)
 	for _, listener := range listeners {
-		go listener()
+		go listener(metaData)
 	}
 	c.String(http.StatusOK, fmt.Sprintf("event: '%s' emitted, %d listeners where found", event, listenerCount))
 }
