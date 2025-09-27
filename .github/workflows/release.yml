@@ -3,12 +3,11 @@ name: release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
   contents: read
-
 
 jobs:
   goreleaser:
@@ -23,7 +22,7 @@ jobs:
 
       - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
-          go-version: '1.24'
+          go-version: "1.25"
           check-latest: true
 
       - name: Login to GitHub Container Registry
@@ -34,7 +33,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: |
           go install github.com/goreleaser/goreleaser/v2@latest 
-          goreleaser release 
+          goreleaser release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
