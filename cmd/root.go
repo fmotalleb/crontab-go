@@ -5,6 +5,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/fmotalleb/go-tools/git"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ designed to replace the traditional crontab in Docker environments.
 With its seamless integration and easy-to-use YAML configuration,
 Cronjob-go simplifies the process of scheduling and managing recurring tasks
 within your containerized applications.`,
+	Version: git.String(),
 	Run: func(_ *cobra.Command, _ []string) {
 		initConfig()
 	},

@@ -11,7 +11,13 @@ builds:
       - darwin
       - linux
       - windows
-    ldflags: "-s -w"
+    ldflags: 
+      - -s
+      - -w
+      - "-X github.com/fmotalleb/go-tools/git.Version={{.Version}}"
+      - "-X github.com/fmotalleb/go-tools/git.Commit={{.ShortCommit}}"
+      - "-X github.com/fmotalleb/go-tools/git.Date={{.Date}}"
+      - "-X github.com/fmotalleb/go-tools/git.Branch={{.Branch}}"
     goarch:
       - amd64
 
@@ -20,7 +26,13 @@ builds:
       - linux
     goarch:
       - amd64
-    ldflags: "-s -w"
+    ldflags: 
+      - -s
+      - -w
+      - "-X github.com/fmotalleb/go-tools/git.Version={{.Version}}"
+      - "-X github.com/fmotalleb/go-tools/git.Commit={{.ShortCommit}}"
+      - "-X github.com/fmotalleb/go-tools/git.Date={{.Date}}"
+      - "-X github.com/fmotalleb/go-tools/git.Branch={{.Branch}}"
     binary: crontab-go
     skip: "archive"
   - id: static
@@ -30,7 +42,14 @@ builds:
       - amd64
     env:
       - CGO_ENABLED=0
-    ldflags: "-s -w -extldflags '-static'"
+    ldflags: 
+      - -s
+      - -w
+      - "-X github.com/fmotalleb/go-tools/git.Version={{.Version}}"
+      - "-X github.com/fmotalleb/go-tools/git.Commit={{.ShortCommit}}"
+      - "-X github.com/fmotalleb/go-tools/git.Date={{.Date}}"
+      - "-X github.com/fmotalleb/go-tools/git.Branch={{.Branch}}"
+      - "-extldflags '-static'"
     binary: crontab-go
     skip: "archive"
 
