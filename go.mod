@@ -11,7 +11,7 @@ tool (
 require (
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/docker/docker v28.4.0+incompatible
-	github.com/fmotalleb/go-tools v0.1.53
+	github.com/fmotalleb/go-tools v0.1.55
 	github.com/gin-gonic/gin v1.11.0
 	github.com/joho/godotenv v1.5.1
 	github.com/prometheus/client_golang v1.23.2
