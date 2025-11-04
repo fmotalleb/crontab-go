@@ -14,7 +14,6 @@ on:
   #   types: [published]
   workflow_dispatch:
 
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: fmotalleb/crontab-go
@@ -41,7 +40,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}}
-      - name: Build and push Docker image Slim (bookworm-slim)
+      - name: Build and push Docker image Slim
         uses: docker/build-push-action@v6
         with:
           context: .

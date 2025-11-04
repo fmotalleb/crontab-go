@@ -11,7 +11,7 @@
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Output debian slim version: has a shell to execute commands and can be extended
-FROM debian:bookworm-slim AS slim
+FROM debian:trixie-slim AS slim
 
 COPY crontab-go /bin/crontab-go
 
