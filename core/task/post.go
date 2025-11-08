@@ -119,7 +119,8 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 		log = log.With(zap.Int("status", res.StatusCode))
 		log.Info("received response with status", zap.String("status", res.Status))
 		if log.Level() >= zap.DebugLevel {
-			ans, err := logHTTPResponse(res)
+			var ans string
+			ans, err = logHTTPResponse(res)
 			log.Debug("fetched data", zap.String("response", ans), zap.Error(err))
 		}
 	}
