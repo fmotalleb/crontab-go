@@ -59,6 +59,14 @@ func (ctx Ctx) getEnv() map[string]string {
 	return env
 }
 
+func (ctx Ctx) getVars() map[string]string {
+	env, ok := ctx.Value(ctxutils.Vars).(map[string]string)
+	if !ok {
+		return map[string]string{}
+	}
+	return env
+}
+
 func (ctx Ctx) envReshape() []string {
 	env := ctx.getEnv()
 	result := make([]string, 0, len(env))
@@ -108,7 +116,10 @@ func (ctx Ctx) applyEventTemplate(src string) (string, error) {
 		ctx.logger.Warn("Event not found in context")
 		return src, nil
 	}
-	return applyTemplate(ctx.logger, src, event.GetData())
+	data := event.GetData()
+	vars := ctx.getVars()
+	data["Vars"] = vars
+	return applyTemplate(ctx.logger, src, data)
 }
 
 func (ctx Ctx) tryTemplate(src string) string {

@@ -13,4 +13,5 @@ var (
 	EventListeners = ContextKey("event-listeners")
 	EventData      = ContextKey("event-data")
 	Environments   = ContextKey("cmd-environments")
+	Vars           = ContextKey("cmd-vars")
 )

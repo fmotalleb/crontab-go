@@ -14,7 +14,8 @@
             "envFile": "${workspaceFolder}/.env",
             "args": [
                 "-c",
-                "config.local.yaml"
+                "config.local.yaml",
+                "-v"
             ]
         },
         {

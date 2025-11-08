@@ -319,6 +319,10 @@
           "$ref": "#/definitions/Map",
           "description": "An Env object that defines the environment variables for the task."
         },
+        "vars": {
+          "$ref": "#/definitions/Map",
+          "description": "A string -> string map that defines the variable table for the task and subsequent tasks, can be accessed via {{ .Vars.<name> }}."
+        },
         "get": {
           "type": "string",
           "format": "uri",

@@ -27,6 +27,7 @@ func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, boo
 		address: task.Post,
 		headers: &task.Headers,
 		data:    &task.Data,
+		task:    task,
 		log: logger.With(
 			zap.String("url", task.Post),
 			zap.String("method", "post"),
@@ -44,6 +45,7 @@ type Post struct {
 	common.Cancelable
 	common.Retry
 	common.Timeout
+	task *config.Task
 
 	address string
 	headers *map[string]string
@@ -53,6 +55,7 @@ type Post struct {
 
 // Execute implements abstraction.Executable.
 func (p *Post) Execute(ctx context.Context) (e error) {
+	ctx = populateVars(ctx, p.task)
 	r := common.GetRetry(ctx)
 	log := p.log.With(
 		zap.Any("retry", r),
@@ -73,6 +76,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 		p.DoFailHooks(ctx)
 		return err
 	}
+
 	ctx = common.IncreaseRetry(ctx)
 
 	var localCtx context.Context
