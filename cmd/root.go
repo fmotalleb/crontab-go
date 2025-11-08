@@ -31,7 +31,7 @@ With its seamless integration and easy-to-use YAML configuration,
 Cronjob-go simplifies the process of scheduling and managing recurring tasks
 within your containerized applications.`,
 	Version: git.String(),
-	PreRun: func(cmd *cobra.Command, _ []string) {
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
 		if verbose, _ := cmd.Flags().GetBool("verbose"); verbose {
 			log.SetDebugDefaults()
 		}
@@ -56,6 +56,9 @@ func init() {
 	}
 	if ltf := os.Getenv("LOG_TIMESTAMP_FORMAT"); ltf != "" {
 		os.Setenv("ZAPLOG_TIME_FORMAT", ltf)
+	}
+	if lf := os.Getenv("LOG_FORMAT"); lf == "ansi" {
+		os.Setenv("ZAPLOG_DEVELOPMENT", "true")
 	}
 	logStdout := env.BoolOr("LOG_STDOUT", false)
 	if lf := os.Getenv("LOG_FILE"); lf != "" {

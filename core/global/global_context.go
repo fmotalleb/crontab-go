@@ -22,10 +22,10 @@ func ctxKey(prefix string, key string) ctxutils.ContextKey {
 }
 
 func CTX() *Context {
-	return c
+	return c()
 }
 
-var c = newGlobalContext()
+var c = sync.OnceValue(newGlobalContext)
 
 type (
 	EventListenerMap = map[string][]func(map[string]any)
@@ -78,16 +78,16 @@ func getTypename[T any](item T) string {
 
 func Put[T any](item T) {
 	name := getTypename(item)
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.Context = context.WithValue(c.Context, ctxKey("typed", name), item)
+	ctx := c()
+	ctx.lock.Lock()
+	defer ctx.lock.Unlock()
+	ctx.Context = context.WithValue(ctx.Context, ctxKey("typed", name), item)
 }
 
 func Get[T any]() T {
 	var zero T // Default zero value for type T
 	name := reflect.TypeOf(zero).String()
-	println(name)
-	value := c.Value(ctxKey("typed", name))
+	value := c().Value(ctxKey("typed", name))
 	if value == nil {
 		return zero
 	}
@@ -101,5 +101,5 @@ func Get[T any]() T {
 }
 
 func Logger(name string) *zap.Logger {
-	return log.Of(c).Named(name)
+	return log.Of(c()).Named(name)
 }
