@@ -3,7 +3,7 @@ package abstraction
 import (
 	"context"
 
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 type CmdConnection interface {

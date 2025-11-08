@@ -5,9 +5,9 @@ import (
 	"regexp"
 
 	"github.com/docker/docker/api/types/events"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
 var acceptedActions = utils.NewList(
@@ -60,17 +60,17 @@ var acceptedActions = utils.NewList(
 	events.ActionHealthStatusUnhealthy,
 )
 
-func (c *JobConfig) Validate(log *logrus.Entry) error {
+func (c *JobConfig) Validate(log *zap.Logger) error {
 	// Log the start of validation
-	log.Tracef("Validating JobConfig: %s", c.Name)
+	log.Debug("begin Validation")
 
 	// Check if the job is disabled
 	if c.Disabled {
 		// Log the disabled job
-		log.Debugf("JobConfig %s is disabled", c.Name)
+		log.Warn("job is disabled")
 		return nil
 	}
-	checkList := []func(*JobConfig, *logrus.Entry) error{
+	checkList := []func(*JobConfig, *zap.Logger) error{
 		validateEvents,
 		validateTasks,
 		validateJobHooks,
@@ -82,40 +82,40 @@ func (c *JobConfig) Validate(log *logrus.Entry) error {
 	}
 
 	// Log the successful validation
-	log.Tracef("Validation successful for JobConfig: %s", c.Name)
+	log.Info("validation successful")
 	return nil
 }
 
-func validateTasks(c *JobConfig, log *logrus.Entry) error {
+func validateTasks(c *JobConfig, log *zap.Logger) error {
 	for _, t := range c.Tasks {
 		if err := t.Validate(log); err != nil {
-			log.Errorf("Validation error in task for JobConfig %s: %v", c.Name, err)
+			log.Error("Validation error in task for JobConfig", zap.Error(err))
 			return err
 		}
 	}
 	return nil
 }
 
-func validateEvents(c *JobConfig, log *logrus.Entry) error {
+func validateEvents(c *JobConfig, log *zap.Logger) error {
 	for _, s := range c.Events {
 		if err := s.Validate(log); err != nil {
-			log.Errorf("Validation error in event for JobConfig %s: %v", c.Name, err)
+			log.Error("Validation error in event for JobConfig", zap.Error(err))
 			return err
 		}
 	}
 	return nil
 }
 
-func validateJobHooks(c *JobConfig, log *logrus.Entry) error {
+func validateJobHooks(c *JobConfig, log *zap.Logger) error {
 	for _, t := range c.Hooks.Failed {
 		if err := t.Validate(log); err != nil {
-			log.Errorf("Validation error in failed hook for JobConfig %s: %v", c.Name, err)
+			log.Error("Validation error in failed hook for JobConfig", zap.Error(err))
 			return err
 		}
 	}
 	for _, t := range c.Hooks.Done {
 		if err := t.Validate(log); err != nil {
-			log.Errorf("Validation error in done hook for JobConfig %s: %v", c.Name, err)
+			log.Error("Validation error in done hook for JobConfig", zap.Error(err))
 			return err
 		}
 	}
@@ -125,14 +125,14 @@ func validateJobHooks(c *JobConfig, log *logrus.Entry) error {
 // Validate checks the validity of a JobEvent configuration.
 // It ensures that the event has a valid interval or cron expression, and only one of on_init, interval, or cron is set.
 // It returns an error if the validation fails, otherwise, it returns nil.
-func (s *JobEvent) Validate(log *logrus.Entry) error {
+func (s *JobEvent) Validate(log *zap.Logger) error {
 	// Check if the interval is a negative value
 	if s.Interval < 0 {
 		err := fmt.Errorf("received a negative time in interval: `%v`", s.Interval)
-		log.WithError(err).Warn("Validation failed for JobEvent")
+		log.Warn("Validation failed for JobEvent", zap.Error(err))
 		return err
 	} else if _, err := DefaultCronParser.Parse(s.Cron); s.Cron != "" && err != nil {
-		log.WithError(err).Warn("Validation failed for JobEvent")
+		log.Warn("Validation failed for JobEvent", zap.Error(err))
 		return err
 	} else if s.Docker != nil {
 		returnValue := dockerValidation(s, log)
@@ -166,16 +166,16 @@ func (s *JobEvent) Validate(log *logrus.Entry) error {
 			s.Docker,
 			s.LogFile,
 		)
-		log.WithError(err).Warn("Validation failed for JobEvent")
+		log.Warn("Validation failed for JobEvent", zap.Error(err))
 		return err
 	}
 
 	// Log the successful validation
-	log.Tracef("Validation successful for JobEvent: %+v", s)
+	log.Debug("Validation successful for JobEvent", zap.Any("event", s))
 	return nil
 }
 
-func dockerValidation(s *JobEvent, log *logrus.Entry) error {
+func dockerValidation(s *JobEvent, log *zap.Logger) error {
 	// Check if regex matchers are valid
 	checkList := utils.NewList[string]()
 	checkList.Add(
@@ -193,13 +193,13 @@ func dockerValidation(s *JobEvent, log *logrus.Entry) error {
 		return err
 	})
 	if err != nil {
-		log.WithError(err).Warn("Validation failed for one of docker regex pattern (container name, image name, labels value)")
+		log.Warn("Validation failed for one of docker regex pattern (container name, image name, labels value)", zap.Error(err))
 		return err
 	}
 	for _, i := range s.Docker.Actions {
 		if !acceptedActions.Contains(events.Action(i)) {
 			err := fmt.Errorf("given action: %#v is not allowed", i)
-			log.WithError(err).Warn("Validation failed for one of docker actions")
+			log.Warn("Validation failed for one of docker actions", zap.Error(err))
 			return err
 		}
 	}
@@ -212,12 +212,12 @@ func dockerValidation(s *JobEvent, log *logrus.Entry) error {
 	}
 	if !utils.NewList("", ErrorPolGiveUp, ErrorPolKill, ErrorPolReconnect).Contains(s.Docker.ErrorLimitPolicy) {
 		err := fmt.Errorf("given error limit policy: %#v is not allowed, possible error policies are (give-up,kill,reconnect)", s.Docker.ErrorLimitPolicy)
-		log.WithError(err).Warn("Validation failed for docker error limit policy")
+		log.Warn("Validation failed for docker error limit policy", zap.Error(err))
 		return err
 	}
 	if s.Docker.ErrorThrottle < 0 {
 		err := fmt.Errorf("received a negative throttle value: `%v`", s.Docker.ErrorThrottle)
-		log.WithError(err).Warn("Validation failed for docker, throttling value error")
+		log.Warn("Validation failed for docker, throttling value error", zap.Error(err))
 		return err
 	}
 	return nil

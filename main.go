@@ -21,14 +21,12 @@ import (
 	"os"
 
 	"github.com/robfig/cron/v3"
-	"github.com/sirupsen/logrus"
 
-	"github.com/FMotalleb/crontab-go/cmd"
-	"github.com/FMotalleb/crontab-go/core/global"
-	"github.com/FMotalleb/crontab-go/core/jobs"
-	"github.com/FMotalleb/crontab-go/core/webserver"
-	"github.com/FMotalleb/crontab-go/logger"
-	"github.com/FMotalleb/crontab-go/meta"
+	"github.com/fmotalleb/crontab-go/cmd"
+	"github.com/fmotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/core/jobs"
+	"github.com/fmotalleb/crontab-go/core/webserver"
+	"github.com/fmotalleb/crontab-go/meta"
 )
 
 func initializeGlobalState() {
@@ -38,9 +36,6 @@ func initializeGlobalState() {
 }
 
 func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		ForceColors: true,
-	})
 	defer func() {
 		if err := recover(); err != nil {
 			log.Printf(
@@ -53,11 +48,11 @@ func main() {
 	}()
 
 	cmd.Execute()
-	logger.InitFromConfig()
-	log := logger.SetupLogger("Crontab-GO")
+
 	initializeGlobalState()
-	log.Info("Booting up")
-	jobs.InitializeJobs(log)
+	l := global.Logger("cron")
+	l.Info("Booting up")
+	jobs.InitializeJobs()
 	if cmd.CFG.WebServerAddress != "" {
 		go webserver.
 			NewWebServer(

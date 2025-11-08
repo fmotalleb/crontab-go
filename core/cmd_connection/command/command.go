@@ -8,20 +8,20 @@ import (
 	"strings"
 
 	"github.com/fmotalleb/go-tools/template"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/core/utils"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 type Ctx struct {
 	context.Context
-	logger *logrus.Entry
+	logger *zap.Logger
 }
 
 // NewCtx initializes a new Ctx with the provided environment and logger.
-func NewCtx(ctx context.Context, taskEnviron map[string]string, logger *logrus.Entry) Ctx {
+func NewCtx(ctx context.Context, taskEnviron map[string]string, logger *zap.Logger) Ctx {
 	envMap := parseEnviron(os.Environ())
 	mergeEnviron(envMap, taskEnviron, logger)
 	newCtx := context.WithValue(ctx, ctxutils.Environments, envMap)
@@ -38,15 +38,15 @@ func parseEnviron(environ []string) map[string]string {
 	return env
 }
 
-func mergeEnviron(dest map[string]string, src map[string]string, logger *logrus.Entry) {
+func mergeEnviron(dest map[string]string, src map[string]string, logger *zap.Logger) {
 	for key, val := range src {
 		upperKey := strings.ToUpper(key)
 		dest[upperKey] = val
 		switch upperKey {
 		case "SHELL":
-			logger.Infof("you've used `SHELL` env variable in command environments, overriding the global shell with: %s", val)
+			logger.Info("you've used `SHELL` env variable in command environments, overriding the global shell", zap.String("shell", val))
 		case "SHELL_ARGS":
-			logger.Infof("you've used `SHELL_ARGS` env variable in command environments, overriding the global shell_args with: %s", val)
+			logger.Info("you've used `SHELL_ARGS` env variable in command environments, overriding the global shell_args", zap.String("shell_args", val))
 		}
 	}
 }
@@ -96,7 +96,7 @@ func (ctx Ctx) BuildExecuteParams(command string) (string, []string, []string) {
 	}
 	cmd, err := ctx.applyEventTemplate(command)
 	if err != nil {
-		ctx.logger.WithError(err).Warn("Failed to apply event template to command")
+		ctx.logger.Warn("Failed to apply event template to command", zap.Error(err))
 	}
 	shellArgs = append(shellArgs, cmd)
 	return shell, shellArgs, envs
@@ -116,10 +116,10 @@ func (ctx Ctx) tryTemplate(src string) string {
 	return res
 }
 
-func applyTemplate(log *logrus.Entry, src string, data map[string]any) (string, error) {
+func applyTemplate(log *zap.Logger, src string, data map[string]any) (string, error) {
 	res, err := template.EvaluateTemplate(src, data)
 	if err != nil {
-		log.WithError(err).Warn("Failed to apply template")
+		log.Warn("Failed to apply template", zap.Error(err))
 		return src, err
 	}
 	return res, nil

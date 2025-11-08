@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 type RetryCount int64
@@ -49,4 +49,8 @@ func GetRetry(ctx context.Context) RetryCount {
 func IncreaseRetry(ctx context.Context) context.Context {
 	current := GetRetry(ctx)
 	return context.WithValue(ctx, ctxutils.RetryCountKey, current+1)
+}
+
+func ResetRetries(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ctxutils.RetryCountKey, 0)
 }

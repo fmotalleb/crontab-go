@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/FMotalleb/crontab-go/core/concurrency"
+	"github.com/fmotalleb/crontab-go/core/concurrency"
 )
 
 func TestLockedValue(t *testing.T) {

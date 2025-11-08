@@ -3,7 +3,7 @@ package common_test
 import (
 	"testing"
 
-	"github.com/FMotalleb/crontab-go/core/common"
+	"github.com/fmotalleb/crontab-go/core/common"
 )
 
 func TestSetCancel(t *testing.T) {

@@ -3,18 +3,18 @@ package event
 
 import (
 	"github.com/robfig/cron/v3"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/global"
 )
 
 func init() {
 	eg.Register(newCronGenerator)
 }
 
-func newCronGenerator(log *logrus.Entry, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
+func newCronGenerator(log *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.Cron != "" {
 		return NewCron(cfg.Cron, global.Get[*cron.Cron](), log), true
 	}
@@ -23,21 +23,19 @@ func newCronGenerator(log *logrus.Entry, cfg *config.JobEvent) (abstraction.Even
 
 type Cron struct {
 	cronSchedule string
-	logger       *logrus.Entry
+	logger       *zap.Logger
 	cron         *cron.Cron
 	entry        *cron.EntryID
 }
 
-func NewCron(schedule string, c *cron.Cron, logger *logrus.Entry) abstraction.EventGenerator {
+func NewCron(schedule string, c *cron.Cron, logger *zap.Logger) abstraction.EventGenerator {
 	cron := &Cron{
 		cronSchedule: schedule,
 		cron:         c,
 		logger: logger.
-			WithFields(
-				logrus.Fields{
-					"scheduler": "cron",
-					"cron":      schedule,
-				},
+			With(
+				zap.String("scheduler", "cron"),
+				zap.String("cron", schedule),
 			),
 	}
 	return cron
@@ -51,7 +49,7 @@ func (c *Cron) BuildTickChannel() abstraction.EventChannel {
 	notifyChan := make(chan abstraction.Event)
 	schedule, err := config.DefaultCronParser.Parse(c.cronSchedule)
 	if err != nil {
-		c.logger.Warnln("cannot initialize cron: ", err)
+		c.logger.Warn("cannot initialize cron", zap.Error(err))
 	} else {
 		entry := c.cron.Schedule(
 			schedule,
@@ -67,13 +65,13 @@ func (c *Cron) BuildTickChannel() abstraction.EventChannel {
 }
 
 type cronJob struct {
-	logger    *logrus.Entry
+	logger    *zap.Logger
 	scheduler string
 	notify    chan<- abstraction.Event
 }
 
 func (j *cronJob) Run() {
-	j.logger.Debugln("cron tick received")
+	j.logger.Debug("cron tick received")
 	j.notify <- NewMetaData(
 		"cron",
 		map[string]any{

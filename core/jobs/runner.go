@@ -4,61 +4,58 @@ import (
 	"context"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/cmd"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/concurrency"
-	"github.com/FMotalleb/crontab-go/core/global"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/cmd"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/concurrency"
+	"github.com/fmotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
-func InitializeJobs(log *logrus.Entry) {
+func InitializeJobs() {
+	log := global.Logger("Cron")
 	for _, job := range cmd.CFG.Jobs {
 		if job.Disabled {
-			log.Warnf("job %s is disabled", job.Name)
+			log.Warn("job is disabled", zap.String("job.name", job.Name))
 			continue
 		}
 		// Setting default value of concurrency
 		if job.Concurrency == 0 {
 			job.Concurrency = 1
 		}
-		c := context.Background()
+		c := global.CTX().Context
 		c = context.WithValue(c, ctxutils.JobKey, job.Name)
 
 		lock, err := concurrency.NewConcurrentPool(job.Concurrency)
 		if err != nil {
-			log.Panicf("failed to validate job (%s): %v", job.Name, err)
+			log.Panic("failed to validate job", zap.String("job.name", job.Name), zap.Error(err))
 		}
-		logger := initLogger(c, log, job)
-		logger = logger.WithField("concurrency", job.Concurrency)
-		if err := job.Validate(log); err != nil {
-			log.Panicf("failed to validate job (%s): %v", job.Name, err)
+		logger := log.With(
+			zap.String("job.name", job.Name),
+			zap.Uint("job.concurrency", job.Concurrency),
+		)
+		if err := job.Validate(logger.Named("Validator")); err != nil {
+			log.Panic("failed to validate job", zap.String("job", job.Name), zap.Error(err))
 		}
 
-		signal := buildSignal(*job, logger)
+		signal := buildSignal(*job, logger.Named("SignalGen"))
 		signal = global.CTX().CountSignals(c, "events", signal, "amount of events dispatched for this job", prometheus.Labels{})
-		tasks, doneHooks, failHooks := initTasks(*job, logger)
-		logger.Trace("Tasks initialized")
+		tasks, doneHooks, failHooks := initTasks(*job, logger.Named("Task"))
+		logger.Debug("Tasks initialized")
 
-		go taskHandler(c, logger, signal, tasks, doneHooks, failHooks, lock)
-		logger.Trace("EventLoop initialized")
+		go taskHandler(c, logger.Named("TaskRunner"), signal, tasks, doneHooks, failHooks, lock)
+		logger.Debug("EventLoop initialized")
 	}
-	log.Debugln("Jobs Are Ready")
+	log.Info("Jobs Are Ready")
 }
 
-func buildSignal(job config.JobConfig, logger *logrus.Entry) abstraction.EventChannel {
+func buildSignal(job config.JobConfig, logger *zap.Logger) abstraction.EventChannel {
 	events := initEvents(job, logger)
-	logger.Trace("Events initialized")
+	logger.Debug("Events initialized")
 
 	signal := initEventSignal(events, logger)
 
 	return signal
-}
-
-func initLogger(c context.Context, log *logrus.Entry, job *config.JobConfig) *logrus.Entry {
-	logger := log.WithContext(c).WithField("job.name", job.Name)
-	logger.Trace("Initializing Job")
-	return logger
 }

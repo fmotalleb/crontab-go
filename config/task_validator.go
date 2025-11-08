@@ -2,22 +2,22 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	credential "github.com/FMotalleb/crontab-go/core/os_credential"
+	credential "github.com/fmotalleb/crontab-go/core/os_credential"
 )
 
 // Validate checks the validity of a Task.
 // It ensures that the task has exactly one of the Get, Post, or Command fields, and validates other fields based on the specified action.
 // If any validation fails, it returns an error with the specific validation error.
 // Otherwise, it returns nil.
-func (t *Task) Validate(log *logrus.Entry) error {
+func (t *Task) Validate(log *zap.Logger) error {
 	// Log the start of validation
-	log.Tracef("Validating Task: %+v", t)
-	checkList := []func(*Task, *logrus.Entry) error{
+	log = log.With(zap.Any("task", t))
+	log.Debug("begin validation")
+	checkList := []func(*Task, *zap.Logger) error{
 		validateActionsList,
 		validateCredential,
 		validateFields,
@@ -35,80 +35,79 @@ func (t *Task) Validate(log *logrus.Entry) error {
 	// Validate hooks
 	for _, task := range append(t.OnDone, t.OnFail...) {
 		if err := task.Validate(log); err != nil {
-			joinedErr := errors.Join(errors.New("hook: failed to validate"), err)
-			log.WithError(joinedErr).Warn("Validation failed for Task")
-			return joinedErr
+			log.Warn("hook: failed to validate", zap.Error(err))
+			return err
 		}
 	}
 
 	// Log the successful validation
-	log.Tracef("Validation successful for Task: %+v", t)
+	log.Debug("Validation successful for Task")
 	return nil
 }
 
-func validateRetry(t *Task, log *logrus.Entry) error {
+func validateRetry(t *Task, log *zap.Logger) error {
 	if t.RetryDelay < 0 {
 		err := fmt.Errorf(
 			"retry delay for tasks cannot be negative received `%d` for %+v",
 			t.RetryDelay,
 			t,
 		)
-		log.WithError(err).Warn("Validation failed for Task")
+		log.Warn("Validation failed for Task", zap.Error(err))
 		return err
 	}
 	return nil
 }
 
-func validatePostData(t *Task, log *logrus.Entry) error {
+func validatePostData(t *Task, log *zap.Logger) error {
 	if t.Data != nil {
 		_, err := json.Marshal(t.Data)
 		if err != nil {
-			log.WithError(err).Warn("Validation failed for Task")
+			log.Warn("Validation failed for Task", zap.Error(err))
 			return err
 		}
 	}
 	return nil
 }
 
-func validateTimeout(t *Task, log *logrus.Entry) error {
+func validateTimeout(t *Task, log *zap.Logger) error {
 	if t.Timeout < 0 {
 		err := fmt.Errorf(
 			"timeout for tasks cannot be negative received `%d` for %+v",
 			t.Timeout,
 			t,
 		)
-		log.WithError(err).Warn("Validation failed for Task")
+		log.Warn("Validation failed for Task", zap.Error(err))
 		return err
 	}
 	return nil
 }
 
-func validateGetRequest(t *Task, log *logrus.Entry) error {
+func validateGetRequest(t *Task, log *zap.Logger) error {
 	if t.Get != "" && t.Data != nil {
 		err := fmt.Errorf("GET request cannot have data field, violating GET URI: `%s`", t.Get)
-		log.WithError(err).Warn("Validation failed for Task")
+		log.Warn("Validation failed for Task", zap.Error(err))
 		return err
 	}
 	return nil
 }
 
-func validateFields(t *Task, log *logrus.Entry) error {
+func validateFields(t *Task, log *zap.Logger) error {
 	if t.Command != "" && (t.Data != nil || t.Headers != nil) {
 		err := fmt.Errorf("command cannot have data or headers field, violating command: `%s`", t.Command)
-		log.WithError(err).Warn("Validation failed for Task")
+		log.Warn("Validation failed for Task", zap.Error(err))
 		return err
 	}
 	return nil
 }
 
-func validateCredential(t *Task, log *logrus.Entry) error {
+func validateCredential(t *Task, log *zap.Logger) error {
 	if err := credential.Validate(log, t.UserName, t.GroupName); err != nil {
-		log.WithError(err).Warn("Be careful when using credentials, in local mode you can't use credentials unless running as root")
+		log.Warn("Be careful when using credentials, in local mode you can't use credentials unless running as root", zap.Error(err))
 	}
 	return nil
 }
 
-func validateActionsList(t *Task, log *logrus.Entry) error {
+func validateActionsList(t *Task, log *zap.Logger) error {
 	actions := []bool{
 		t.Get != "",
 		t.Command != "",
@@ -127,7 +126,7 @@ func validateActionsList(t *Task, log *logrus.Entry) error {
 			t.Get,
 			t.Post,
 		)
-		log.WithError(err).Warn("Validation failed for Task")
+		log.Warn("Validation failed for Task", zap.Error(err))
 		return err
 	}
 	return nil

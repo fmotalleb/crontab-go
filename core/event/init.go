@@ -1,17 +1,17 @@
 package event
 
 import (
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 func init() {
 	eg.Register(newInitGenerator)
 }
 
-func newInitGenerator(_ *logrus.Entry, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
+func newInitGenerator(_ *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.OnInit {
 		return &Init{}, true
 	}

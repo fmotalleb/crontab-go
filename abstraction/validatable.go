@@ -1,9 +1,9 @@
 package abstraction
 
-import "github.com/sirupsen/logrus"
+import "go.uber.org/zap"
 
 type (
 	Validatable interface {
-		Validate(log *logrus.Entry) error
+		Validate(log *zap.Logger) error
 	}
 )

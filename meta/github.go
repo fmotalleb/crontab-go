@@ -4,7 +4,7 @@ package meta
 import "fmt"
 
 func GHUserName() string {
-	return "FMotalleb"
+	return "fmotalleb"
 }
 
 func GHProjectName() string {

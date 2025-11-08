@@ -8,13 +8,13 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/cmd_connection/command"
-	"github.com/FMotalleb/crontab-go/core/utils"
-	"github.com/FMotalleb/crontab-go/helpers"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/cmd_connection/command"
+	"github.com/fmotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/helpers"
 )
 
 func init() {
@@ -24,7 +24,7 @@ func init() {
 // DockerCreateConnection is a struct that manages the creation and execution of Docker containers.
 type DockerCreateConnection struct {
 	conn            *config.TaskConnection
-	log             *logrus.Entry
+	log             *zap.Logger
 	cli             *client.Client
 	containerConfig *container.Config
 	hostConfig      *container.HostConfig
@@ -34,21 +34,19 @@ type DockerCreateConnection struct {
 
 // NewDockerCreateConnection initializes a new DockerCreateConnection instance.
 // Parameters:
-// - log: A logrus.Entry instance for logging.
+// - log: A zap.Logger instance for logging.
 // - conn: A TaskConnection instance containing the connection configuration.
 // Returns:
 // - A new instance of DockerCreateConnection.
-func NewDockerCreateConnection(log *logrus.Entry, conn *config.TaskConnection) (abstraction.CmdConnection, bool) {
+func NewDockerCreateConnection(log *zap.Logger, conn *config.TaskConnection) (abstraction.CmdConnection, bool) {
 	if conn.ImageName == "" {
 		return nil, false
 	}
 	res := &DockerCreateConnection{
 		conn: conn,
-		log: log.WithFields(
-			logrus.Fields{
-				"connection":  "docker",
-				"docker-mode": "create",
-			},
+		log: log.With(
+			zap.String("connection", "docker"),
+			zap.String("docker-mode", "create"),
 		),
 	}
 	return res, true
@@ -140,7 +138,7 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 		return nil, err
 	}
 
-	d.log.Debugf("container created: %v, warnings: %v", exec, exec.Warnings)
+	d.log.Debug("container created", zap.Any("response", exec), zap.Strings("warnings", exec.Warnings))
 
 	defer helpers.WarnOnErrIgnored(
 		d.log,
@@ -151,7 +149,7 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 				},
 			)
 		},
-		"cannot remove the container: %s",
+		"cannot remove the container",
 	)
 
 	for {
@@ -166,7 +164,7 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 		}
 	}
 
-	d.log.Tracef("container started: %v", exec)
+	d.log.Debug("container started", zap.Any("container", exec))
 
 	for {
 		_, err = d.cli.ContainerStats(
@@ -180,7 +178,7 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 		}
 	}
 
-	d.log.Debugf("container ready to attach: %v", exec)
+	d.log.Debug("container started", zap.Any("container", exec))
 	// Attach to the exec instance
 	resp, err := d.cli.ContainerLogs(
 		ctx,
@@ -206,8 +204,9 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 	writer := bytes.NewBuffer([]byte{})
 	// Print the command output
 	wrote, err := io.Copy(writer, resp)
-	d.log.Debugf("wrote %d bytes to stdout", wrote)
+	d.log.Debug("output of stdout is fetched", zap.Int64("bytes", wrote))
 	if err != nil {
+		d.log.Debug("copy of std is failed", zap.Int64("until-err", wrote), zap.Error(err))
 		return writer.Bytes(), err
 	}
 	return writer.Bytes(), nil

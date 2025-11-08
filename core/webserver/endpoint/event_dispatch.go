@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/FMotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/core/global"
 )
 
 type EventDispatchEndpoint struct{}

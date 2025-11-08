@@ -1,80 +1,75 @@
 {
-    "[go]": {
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        },
-    },
-    "[go.mod]": {
-        "editor.formatOnSave": true,
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        },
-    },
-    // gopls
-    "go.useLanguageServer": true,
-    "gopls": {
-        "formatting.local": "github.com/FMotalleb/crontab-go",
-        "formatting.gofumpt": true
-    },
-    // golangci-lint  
-    "go.lintTool": "golangci-lint",
-    "go.lintFlags": [
-        "--fast"
-    ],
-    "[go][go.mod]": {
-        "editor.codeActionsOnSave": {
-            "source.organizeImports": "explicit"
-        }
-    },
-    "cSpell.words": [
-        "alecthomas",
-        "bodyclose",
-        "cfgcompiler",
-        "dupl",
-        "errcheck",
-        "exportloopref",
-        "funlen",
-        "gochecknoinits",
-        "goconst",
-        "gocritic",
-        "gocyclo",
-        "godotenv",
-        "gofumpt",
-        "goimports",
-        "gonic",
-        "goprintffuncname",
-        "gosec",
-        "gosimple",
-        "govet",
-        "ineffassign",
-        "joho",
-        "mocklogger",
-        "nakedret",
-        "noctx",
-        "nolint",
-        "rowserrcheck",
-        "sqlclosecheck",
-        "staticcheck",
-        "stylecheck",
-        "Tracef",
-        "Traceln",
-        "typecheck",
-        "unconvert",
-        "unparam",
-        "webserver"
-    ],
-    "json.schemaDownload.enable": true,
-    "yaml.schemas": {
-        "https://raw.githubusercontent.com/FMotalleb/crontab-go/main/schema.json": [
-            "config.example.yaml",
-            "config.yaml",
-            "config.doc.yaml"
-        ],
-        "./schema.json": [
-            "config.example.yaml",
-            "config.yaml"
-        ],
-        "file:///home/motalleb/Documents/GitHub/crontab-go/schema.json": "file:///home/motalleb/Documents/GitHub/crontab-go/config.local.yaml"
+  "[go]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
     }
+  },
+  "[go.mod]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  // gopls
+  "go.useLanguageServer": true,
+  "gopls": {
+    "formatting.local": "github.com/fmotalleb/crontab-go",
+    "formatting.gofumpt": true
+  },
+  // golangci-lint
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": ["--fast"],
+  "[go][go.mod]": {
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "cSpell.words": [
+    "alecthomas",
+    "bodyclose",
+    "cfgcompiler",
+    "dupl",
+    "errcheck",
+    "exportloopref",
+    "funlen",
+    "gochecknoinits",
+    "goconst",
+    "gocritic",
+    "gocyclo",
+    "godotenv",
+    "gofumpt",
+    "goimports",
+    "gonic",
+    "goprintffuncname",
+    "gosec",
+    "gosimple",
+    "govet",
+    "ineffassign",
+    "joho",
+    "mocklogger",
+    "nakedret",
+    "noctx",
+    "nolint",
+    "rowserrcheck",
+    "sqlclosecheck",
+    "staticcheck",
+    "stylecheck",
+    "Tracef",
+    "Traceln",
+    "typecheck",
+    "unconvert",
+    "unparam",
+    "webserver"
+  ],
+  "json.schemaDownload.enable": true,
+  "yaml.schemas": {
+    "https://raw.githubusercontent.com/fmotalleb/crontab-go/main/schema.json": [
+      "config.example.yaml",
+      "config.yaml",
+      "config.doc.yaml"
+    ],
+    "./schema.json": ["config.example.yaml", "config.yaml"],
+    "file:///home/motalleb/Documents/GitHub/crontab-go/schema.json": "file:///home/motalleb/Documents/GitHub/crontab-go/config.local.yaml"
+  }
 }

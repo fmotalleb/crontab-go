@@ -3,12 +3,10 @@ package config_test
 import (
 	"testing"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/alecthomas/assert/v2"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
-	mocklogger "github.com/FMotalleb/crontab-go/logger/mock_logger"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 func TestJobEvent_Validate_WebEvent(t *testing.T) {
@@ -18,10 +16,7 @@ func TestJobEvent_Validate_WebEvent(t *testing.T) {
 		OnInit:   false,
 		WebEvent: "test-event",
 	}
-	logger, _ := mocklogger.HijackOutput(logrus.New())
-	log := logrus.NewEntry(logger)
-
-	err := event.Validate(log)
+	err := event.Validate(zap.NewNop())
 
 	assert.NoError(t, err)
 }
@@ -33,10 +28,7 @@ func TestJobEvent_Validate_PositiveInterval(t *testing.T) {
 		OnInit:   false,
 		WebEvent: "",
 	}
-	logger, _ := mocklogger.HijackOutput(logrus.New())
-	log := logrus.NewEntry(logger)
-
-	err := event.Validate(log)
+	err := event.Validate(zap.NewNop())
 
 	assert.NoError(t, err)
 }
@@ -47,10 +39,8 @@ func TestJobEvent_Validate_CorrectCron(t *testing.T) {
 		Cron:     "* * * * *",
 		OnInit:   false,
 	}
-	logger, _ := mocklogger.HijackOutput(logrus.New())
-	log := logrus.NewEntry(logger)
 
-	err := event.Validate(log)
+	err := event.Validate(zap.NewNop())
 	assert.NoError(t, err)
 }
 
@@ -60,10 +50,8 @@ func TestJobEvent_Validate_NegativeInterval(t *testing.T) {
 		Cron:     "",
 		OnInit:   false,
 	}
-	logger, _ := mocklogger.HijackOutput(logrus.New())
-	log := logrus.NewEntry(logger)
 
-	err := event.Validate(log)
+	err := event.Validate(zap.NewNop())
 
 	expectedErr := "received a negative time in interval: `-10ns`"
 
@@ -77,10 +65,8 @@ func TestJobEvent_Validate_InvalidCronExpression(t *testing.T) {
 		Cron:     "invalid_cron_expression",
 		OnInit:   false,
 	}
-	logger, _ := mocklogger.HijackOutput(logrus.New())
-	log := logrus.NewEntry(logger)
 
-	err := event.Validate(log)
+	err := event.Validate(zap.NewNop())
 
 	assert.Error(t, err)
 }
@@ -91,10 +77,8 @@ func TestJobEvent_Validate_MultipleActiveSchedules(t *testing.T) {
 		Cron:     "0 0 * * *",
 		OnInit:   true,
 	}
-	logger, _ := mocklogger.HijackOutput(logrus.New())
-	log := logrus.NewEntry(logger)
 
-	err := event.Validate(log)
+	err := event.Validate(zap.NewNop())
 
 	expectedErr := "a single event must have one of "
 

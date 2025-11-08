@@ -5,9 +5,10 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/fmotalleb/go-tools/log"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 type CronString struct {
@@ -51,14 +52,6 @@ func (s CronString) sanitize() CronString {
 		sanitizeComments().
 		sanitizeLineBreaker().
 		sanitizeEmptyLine()
-	log.TraceFn(func() []interface{} {
-		return []any{
-			"sanitizing input:\n",
-			s.string,
-			"\nOutput:\n",
-			sane.string,
-		}
-	})
 	return sane
 }
 
@@ -70,24 +63,25 @@ func (s *CronString) parseAsSpec(
 	pattern string,
 	hasUser bool,
 ) ([]cronSpec, error) {
+	log := log.NewBuilder().FromEnv().MustBuild()
 	envTable := make(map[string]string)
 	specs := make([]cronSpec, 0)
 	lines := s.sanitize().lines()
 	matcher, parser, err := buildMapper(hasUser, pattern)
-	log.Tracef("parsing lines using `%s` line matcher", matcher.String())
+	log.Debug("parsing lines using line matcher", zap.String("matcher", matcher.String()))
 	if err != nil {
 		return []cronSpec{}, err
 	}
 	for num, line := range lines {
 		l := cronLine{line}
 		if env, err := l.exportEnv(); len(env) > 0 {
-			log.Tracef("line %d(post sanitize) is identified as environment line", num)
+			log.Debug("line (post sanitize) is identified as environment line", zap.Int("line-num", num))
 			if err != nil {
 				return nil, err
 			}
 			for key, val := range env {
 				if old, ok := envTable[key]; ok {
-					log.Warnf("env var of key `%s`, value `%s`, is going to be replaced by `%s`", key, old, val)
+					log.Warn("env var is going to be replaced", zap.String("key", key), zap.String("old", old), zap.String("new", val))
 				}
 				envTable[key] = val
 			}

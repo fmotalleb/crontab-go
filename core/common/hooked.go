@@ -5,8 +5,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/core/global"
 )
 
 const (
@@ -57,6 +57,7 @@ func (h *Hooked) DoDoneHooks(ctx context.Context) []error {
 			return f + 1
 		},
 	)
+	ctx = ResetRetries(ctx)
 	return executeTasks(ctx, h.doneHooks)
 }
 
@@ -71,6 +72,7 @@ func (h *Hooked) DoFailHooks(ctx context.Context) []error {
 			return f + 1
 		},
 	)
+	ctx = ResetRetries(ctx)
 	return executeTasks(ctx, h.failHooks)
 }
 

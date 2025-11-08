@@ -2,17 +2,19 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 
+	"github.com/fmotalleb/go-tools/env"
 	"github.com/fmotalleb/go-tools/git"
+	"github.com/fmotalleb/go-tools/log"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/FMotalleb/crontab-go/cmd/parser"
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/cmd/parser"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 var (
@@ -29,6 +31,11 @@ With its seamless integration and easy-to-use YAML configuration,
 Cronjob-go simplifies the process of scheduling and managing recurring tasks
 within your containerized applications.`,
 	Version: git.String(),
+	PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+		if verbose, _ := cmd.Flags().GetBool("verbose"); verbose {
+			log.SetDebugDefaults()
+		}
+	},
 	Run: func(_ *cobra.Command, _ []string) {
 		initConfig()
 	},
@@ -44,21 +51,41 @@ func Execute() {
 func init() {
 	_ = godotenv.Load()
 
+	if ll := os.Getenv("LOG_LEVEL"); ll != "" {
+		os.Setenv("ZAPLOG_LEVEL", ll)
+	}
+	if ltf := os.Getenv("LOG_TIMESTAMP_FORMAT"); ltf != "" {
+		os.Setenv("ZAPLOG_TIME_FORMAT", ltf)
+	}
+	if lf := os.Getenv("LOG_FORMAT"); lf == "ansi" {
+		os.Setenv("ZAPLOG_DEVELOPMENT", "true")
+	}
+	logStdout := env.BoolOr("LOG_STDOUT", false)
+	if lf := os.Getenv("LOG_FILE"); lf != "" {
+		rlf := lf
+		if logStdout {
+			rlf = "stdout," + lf
+		}
+		os.Setenv("ZAPLOG_OUTPUT_PATHS", rlf)
+		os.Setenv("ZAPLOG_ERROR_PATHS", rlf)
+	}
+
 	rootCmd.AddCommand(parser.ParserCmd)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is config.yaml)")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable debug logger")
 
 	// cobra.OnInitialize()
 }
 
 func warnOnErr(err error, message string) {
 	if err != nil {
-		logrus.Warnf(message, err)
+		fmt.Printf("%s, %v", message, err)
 	}
 }
 
 func panicOnErr(err error, message string) {
 	if err != nil {
-		logrus.Panicf(message, err)
+		panic(fmt.Errorf("%s, %w", message, err))
 	}
 }
 
@@ -89,43 +116,12 @@ func initConfig() {
 		"Cannot unmarshal the config file: %s",
 	)
 	panicOnErr(
-		CFG.Validate(logrus.WithField("section", "config.validation")),
+		CFG.Validate(),
 		"Failed to initialize config file: %s",
 	)
 }
 
 func setupEnv() {
-	viper.SetDefault("log_timestamp_format", "2006-01-02T15:04:05Z07:00")
-	warnOnErr(
-		viper.BindEnv(
-			"log_timestamp_format",
-			"timestamp_format",
-		),
-		"Cannot bind log_timestamp_format env variable: %s",
-	)
-	viper.SetDefault("log_format", "ansi")
-	warnOnErr(
-		viper.BindEnv(
-			"log_format",
-			"output_format",
-		),
-		"Cannot bind log_format env variable: %s",
-	)
-	warnOnErr(
-		viper.BindEnv(
-			"log_file",
-			"output_file",
-		),
-		"Cannot bind log_file env variable: %s",
-	)
-	viper.SetDefault("log_stdout", true)
-	warnOnErr(
-		viper.BindEnv(
-			"log_stdout",
-			"print",
-		),
-		"Cannot bind log_stdout env variable: %s",
-	)
 	warnOnErr(
 		viper.BindEnv(
 			"webserver_port",
@@ -163,15 +159,6 @@ func setupEnv() {
 			"username",
 		),
 		"Cannot bind webserver_username env variable: %s",
-	)
-
-	viper.SetDefault("log_level", "info")
-	warnOnErr(
-		viper.BindEnv(
-			"log_level",
-			"level",
-		),
-		"Cannot bind log_level env variable: %s",
 	)
 
 	warnOnErr(

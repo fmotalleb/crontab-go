@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
-func Validate(log *logrus.Entry, usr string, grp string) error {
+func Validate(log *zap.Logger, usr string, grp string) error {
 	cu, err := osUser.Current()
 	if err != nil {
 		return fmt.Errorf("cannot get current user error: %w", err)
@@ -34,30 +34,30 @@ func Validate(log *logrus.Entry, usr string, grp string) error {
 	return nil
 }
 
-func SetUser(log *logrus.Entry, proc *exec.Cmd, usr string, grp string) {
+func SetUser(log *zap.Logger, proc *exec.Cmd, usr string, grp string) {
 	if usr == "" {
-		log.Trace("no username given, running as current user")
+		log.Debug("no username given, running as current user")
 		return
 	}
 
 	uid, gid, err := lookupUIDAndGID(usr, log)
 	if err != nil {
-		log.Panicf("cannot get uid and gid of user %s, error: %s", usr, err)
+		log.Panic("cannot get uid and gid of user", zap.String("user", usr), zap.Error(err))
 	}
 	if grp != "" {
 		gid, _ = lookupGID(grp, log)
 	}
 
-	setUID(log, proc, uid, gid)
+	setUID(proc, uid, gid)
 }
 
-func lookupGID(grp string, log *logrus.Entry) (gid uint32, err error) {
+func lookupGID(grp string, log *zap.Logger) (gid uint32, err error) {
 	if grp == "" {
 		return 0, nil
 	}
 	g, err := osUser.LookupGroup(grp)
 	if err != nil {
-		log.Panicf("cannot find group with name %s in the os: %s, you've changed os users during application runtime", grp, err)
+		log.Panic("cannot find group", zap.String("group", grp), zap.Error(err))
 	}
 	gidU, err := strconv.ParseUint(g.Gid, 10, 32)
 	if err != nil {
@@ -66,13 +66,13 @@ func lookupGID(grp string, log *logrus.Entry) (gid uint32, err error) {
 	return uint32(gidU), nil
 }
 
-func lookupUIDAndGID(usr string, log *logrus.Entry) (uid uint32, gid uint32, err error) {
+func lookupUIDAndGID(usr string, log *zap.Logger) (uid uint32, gid uint32, err error) {
 	if usr == "" {
 		return 0, 0, nil
 	}
 	u, err := osUser.Lookup(usr)
 	if err != nil {
-		log.Panicf("cannot find user with name %s in the os: %s, you've changed os users during application runtime", usr, err)
+		log.Panic("cannot get uid and gid of user", zap.String("user", usr), zap.Error(err))
 	}
 	uidU, err := strconv.ParseUint(u.Uid, 10, 32)
 	if err != nil {
@@ -86,12 +86,10 @@ func lookupUIDAndGID(usr string, log *logrus.Entry) (uid uint32, gid uint32, err
 }
 
 func setUID(
-	log *logrus.Entry,
 	proc *exec.Cmd,
 	uid uint32,
 	gid uint32,
 ) {
-	log.Tracef("Setting: uid(%d) and gid(%d)", uid, gid)
 	attrib := &syscall.SysProcAttr{}
 	proc.SysProcAttr = attrib
 	proc.SysProcAttr.Credential = &syscall.Credential{

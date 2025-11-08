@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
 // TODO[epic=events] add watch method (probably after fs watcher is implemented)
@@ -23,7 +23,7 @@ func init() {
 	eg.Register(newLogListenerGenerator)
 }
 
-func newLogListenerGenerator(log *logrus.Entry, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
+func newLogListenerGenerator(log *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.LogFile != "" {
 		listener, err := NewLogFile(
 			cfg.LogFile,
@@ -33,7 +33,7 @@ func newLogListenerGenerator(log *logrus.Entry, cfg *config.JobEvent) (abstracti
 			log,
 		)
 		if err != nil {
-			log.Error("Error creating LogFileListener: ", err)
+			log.Error("Error creating LogFileListener", zap.Error(err))
 			return nil, false
 		}
 		return listener, true
@@ -43,7 +43,7 @@ func newLogListenerGenerator(log *logrus.Entry, cfg *config.JobEvent) (abstracti
 
 // LogFile represents a log file that triggers an event when its content changes.
 type LogFile struct {
-	logger      *logrus.Entry
+	logger      *zap.Logger
 	filePath    string
 	lineBreaker string
 	matcher     regexp.Regexp
@@ -52,7 +52,7 @@ type LogFile struct {
 }
 
 // NewLogFile creates a new LogFile with the given parameters.
-func NewLogFile(filePath string, lineBreaker string, matcherStr string, checkCycle time.Duration, logger *logrus.Entry) (*LogFile, error) {
+func NewLogFile(filePath string, lineBreaker string, matcherStr string, checkCycle time.Duration, logger *zap.Logger) (*LogFile, error) {
 	lineBreaker = utils.FirstNonZeroForced(lineBreaker, "\n")
 	matcherStr = utils.FirstNonZeroForced(matcherStr, ".")
 	checkCycle = utils.FirstNonZeroForced(checkCycle, time.Second)
@@ -64,14 +64,12 @@ func NewLogFile(filePath string, lineBreaker string, matcherStr string, checkCyc
 		return nil, err
 	}
 	return &LogFile{
-		logger: logger.WithFields(
-			logrus.Fields{
-				"scheduler":    "log_file",
-				"file":         filePath,
-				"line_breaker": lineBreaker,
-				"matcher":      matcherStr,
-				"check_cycle":  checkCycle,
-			},
+		logger: logger.With(
+			zap.String("scheduler", "log_file"),
+			zap.String("file", filePath),
+			zap.String("line_breaker", lineBreaker),
+			zap.String("matcher", matcherStr),
+			zap.Duration("check_cycle", checkCycle),
 		),
 		filePath:    filePath,
 		lineBreaker: lineBreaker,
@@ -87,24 +85,24 @@ func (lf *LogFile) BuildTickChannel() abstraction.EventChannel {
 		// Use bufio to read file line by line
 		file, err := os.Open(lf.filePath)
 		if err != nil {
-			lf.logger.Error("failed to open log file: ", err)
+			lf.logger.Error("failed to open log file", zap.Error(err))
 		}
 		defer func() {
 			if err = file.Close(); err != nil {
-				lf.logger.Warnf("failed to close log file: %s", err)
+				lf.logger.Warn("failed to close log file", zap.Error(err))
 			}
 		}()
 		reader := bufio.NewReader(file)
 		_, err = reader.Discard(math.MaxInt64)
 		if err != nil && !errors.Is(err, io.EOF) {
-			lf.logger.Warnln("error skipping initial data: ", err)
+			lf.logger.Warn("error skipping initial data", zap.Error(err))
 			return
 		}
 		for {
 			data, err := reader.ReadString(byte(0))
-			lf.logger.Tracef("read line: %s,Err: %s", data, err)
+			lf.logger.Debug("failed to read line", zap.String("data", data), zap.Error(err))
 			if err != nil && err != io.EOF {
-				lf.logger.Error("error reading log file: ", err)
+				lf.logger.Error("error reading log file", zap.Error(err))
 				return
 			}
 			for _, line := range strings.Split(data, lf.lineBreaker) {
