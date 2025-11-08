@@ -4,6 +4,8 @@ package global
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"reflect"
 	"sync"
 
@@ -34,17 +36,19 @@ type (
 )
 
 func newGlobalContext() *Context {
-	ctx := &Context{
-		Context: context.WithValue(
-			context.Background(),
-			ctxutils.EventListeners,
-			EventListenerMap{},
-		),
+	ctx := context.Background()
+	ctx, _ = signal.NotifyContext(ctx, os.Interrupt, os.Kill)
+	ctx = context.WithValue(
+		ctx,
+		ctxutils.EventListeners,
+		EventListenerMap{},
+	)
+	return &Context{
+		Context:       ctx,
 		lock:          new(sync.RWMutex),
 		countersValue: make(map[string]*concurrency.LockedValue[float64]),
 		counters:      make(map[string]prometheus.CounterFunc),
 	}
-	return ctx
 }
 
 func (c *Context) EventListeners() EventListenerMap {

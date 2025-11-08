@@ -51,6 +51,7 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
 	cmd.Execute()
 	logger.InitFromConfig()
 	log := logger.SetupLogger("Crontab-GO")
@@ -72,5 +73,5 @@ func main() {
 			).
 			Serve()
 	}
-	select {}
+	<-global.CTX().Done()
 }
