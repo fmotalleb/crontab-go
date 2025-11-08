@@ -78,7 +78,7 @@ func TestCompileEvent_IntervalZeroWithCronAndOnInitSet(t *testing.T) {
 }
 
 func TestNewMetaData(t *testing.T) {
-	extra := map[string]any{"key1": "value1"}
+	extra := map[string]any{"emitter": "emitter1", "key1": "value1"}
 	m := event.NewMetaData("emitter1", extra)
 	assert.Equal(t, "emitter1", m.Emitter)
 	assert.Equal(t, extra, m.Extra)
@@ -130,10 +130,7 @@ func TestGetData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &event.MetaData{
-				Emitter: tt.emitter,
-				Extra:   tt.extra,
-			}
+			m := event.NewMetaData(tt.emitter, tt.extra)
 			data := m.GetData()
 			assert.Equal(t, tt.expected, data)
 		})

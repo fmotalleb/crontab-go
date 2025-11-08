@@ -158,5 +158,5 @@ func TestTaskValidate_ValidCommandWithErrorHook(t *testing.T) {
 
 	err := task.Validate(zap.NewNop())
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "hook: failed to validate")
+	assert.Contains(t, err.Error(), "a single task should have one of")
 }
