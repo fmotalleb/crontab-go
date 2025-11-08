@@ -47,7 +47,6 @@ func (h *Hooked) SetFailHooks(ctx context.Context, failHooks []abstraction.Execu
 }
 
 func (h *Hooked) DoDoneHooks(ctx context.Context) []error {
-	ctx = ResetRetries(ctx)
 	global.CTX().MetricCounter(
 		ctx,
 		okMetricName,
@@ -58,11 +57,11 @@ func (h *Hooked) DoDoneHooks(ctx context.Context) []error {
 			return f + 1
 		},
 	)
+	ctx = ResetRetries(ctx)
 	return executeTasks(ctx, h.doneHooks)
 }
 
 func (h *Hooked) DoFailHooks(ctx context.Context) []error {
-	ctx = ResetRetries(ctx)
 	global.CTX().MetricCounter(
 		ctx,
 		errMetricName,
@@ -73,6 +72,7 @@ func (h *Hooked) DoFailHooks(ctx context.Context) []error {
 			return f + 1
 		},
 	)
+	ctx = ResetRetries(ctx)
 	return executeTasks(ctx, h.failHooks)
 }
 
