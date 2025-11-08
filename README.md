@@ -73,8 +73,6 @@ To get started with Cronjob-go, simply download the binary for your platform and
 
 This project was possible thanks to
 
-- [Logrus](https://github.com/sirupsen/logrus)
-  - Logrus is a structured logger for Go (golang), completely API compatible with the standard library logger.
 - [Cobra](https://github.com/spf13/cobra)
   - Cobra is a library for creating powerful modern CLI applications.
 - [Viper](https://github.com/spf13/viper)

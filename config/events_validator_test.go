@@ -1,101 +1,87 @@
 package config_test
 
-// import (
-// 	"testing"
+import (
+	"testing"
 
-// 	"github.com/alecthomas/assert/v2"
+	"github.com/alecthomas/assert/v2"
+	"go.uber.org/zap"
 
-// 	"github.com/FMotalleb/crontab-go/config"
-// 	mocklogger "github.com/FMotalleb/crontab-go/logger/mock_logger"
-// )
+	"github.com/FMotalleb/crontab-go/config"
+)
 
-// func TestJobEvent_Validate_WebEvent(t *testing.T) {
-// 	event := config.JobEvent{
-// 		Interval: 0,
-// 		Cron:     "",
-// 		OnInit:   false,
-// 		WebEvent: "test-event",
-// 	}
-// 	logger, _ := mocklogger.HijackOutput(logrus.New())
-// 	log := logrus.NewEntry(logger)
+func TestJobEvent_Validate_WebEvent(t *testing.T) {
+	event := config.JobEvent{
+		Interval: 0,
+		Cron:     "",
+		OnInit:   false,
+		WebEvent: "test-event",
+	}
+	err := event.Validate(zap.NewNop())
 
-// 	err := event.Validate(log)
+	assert.NoError(t, err)
+}
 
-// 	assert.NoError(t, err)
-// }
+func TestJobEvent_Validate_PositiveInterval(t *testing.T) {
+	event := config.JobEvent{
+		Interval: 10,
+		Cron:     "",
+		OnInit:   false,
+		WebEvent: "",
+	}
+	err := event.Validate(zap.NewNop())
 
-// func TestJobEvent_Validate_PositiveInterval(t *testing.T) {
-// 	event := config.JobEvent{
-// 		Interval: 10,
-// 		Cron:     "",
-// 		OnInit:   false,
-// 		WebEvent: "",
-// 	}
-// 	logger, _ := mocklogger.HijackOutput(logrus.New())
-// 	log := logrus.NewEntry(logger)
+	assert.NoError(t, err)
+}
 
-// 	err := event.Validate(log)
+func TestJobEvent_Validate_CorrectCron(t *testing.T) {
+	event := config.JobEvent{
+		Interval: 0,
+		Cron:     "* * * * *",
+		OnInit:   false,
+	}
 
-// 	assert.NoError(t, err)
-// }
+	err := event.Validate(zap.NewNop())
+	assert.NoError(t, err)
+}
 
-// func TestJobEvent_Validate_CorrectCron(t *testing.T) {
-// 	event := config.JobEvent{
-// 		Interval: 0,
-// 		Cron:     "* * * * *",
-// 		OnInit:   false,
-// 	}
-// 	logger, _ := mocklogger.HijackOutput(logrus.New())
-// 	log := logrus.NewEntry(logger)
+func TestJobEvent_Validate_NegativeInterval(t *testing.T) {
+	event := config.JobEvent{
+		Interval: -10,
+		Cron:     "",
+		OnInit:   false,
+	}
 
-// 	err := event.Validate(log)
-// 	assert.NoError(t, err)
-// }
+	err := event.Validate(zap.NewNop())
 
-// func TestJobEvent_Validate_NegativeInterval(t *testing.T) {
-// 	event := config.JobEvent{
-// 		Interval: -10,
-// 		Cron:     "",
-// 		OnInit:   false,
-// 	}
-// 	logger, _ := mocklogger.HijackOutput(logrus.New())
-// 	log := logrus.NewEntry(logger)
+	expectedErr := "received a negative time in interval: `-10ns`"
 
-// 	err := event.Validate(log)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), expectedErr)
+}
 
-// 	expectedErr := "received a negative time in interval: `-10ns`"
+func TestJobEvent_Validate_InvalidCronExpression(t *testing.T) {
+	event := config.JobEvent{
+		Interval: 0,
+		Cron:     "invalid_cron_expression",
+		OnInit:   false,
+	}
 
-// 	assert.Error(t, err)
-// 	assert.Contains(t, err.Error(), expectedErr)
-// }
+	err := event.Validate(zap.NewNop())
 
-// func TestJobEvent_Validate_InvalidCronExpression(t *testing.T) {
-// 	event := config.JobEvent{
-// 		Interval: 0,
-// 		Cron:     "invalid_cron_expression",
-// 		OnInit:   false,
-// 	}
-// 	logger, _ := mocklogger.HijackOutput(logrus.New())
-// 	log := logrus.NewEntry(logger)
+	assert.Error(t, err)
+}
 
-// 	err := event.Validate(log)
+func TestJobEvent_Validate_MultipleActiveSchedules(t *testing.T) {
+	event := config.JobEvent{
+		Interval: 60,
+		Cron:     "0 0 * * *",
+		OnInit:   true,
+	}
 
-// 	assert.Error(t, err)
-// }
+	err := event.Validate(zap.NewNop())
 
-// func TestJobEvent_Validate_MultipleActiveSchedules(t *testing.T) {
-// 	event := config.JobEvent{
-// 		Interval: 60,
-// 		Cron:     "0 0 * * *",
-// 		OnInit:   true,
-// 	}
-// 	logger, _ := mocklogger.HijackOutput(logrus.New())
-// 	log := logrus.NewEntry(logger)
+	expectedErr := "a single event must have one of "
 
-// 	err := event.Validate(log)
-
-// 	expectedErr := "a single event must have one of "
-
-// 	assert.Error(t, err)
-// 	assert.Contains(t, err.Error(), expectedErr)
-// }
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), expectedErr)
+}
