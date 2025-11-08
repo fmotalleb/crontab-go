@@ -99,12 +99,11 @@ func (g *Get) Execute(ctx context.Context) (e error) {
 		log.Info("received response with status", zap.String("status", res.Status))
 
 		if log.Level() >= zap.DebugLevel {
-			var ans string
-			ans, err = logHTTPResponse(res)
-			log.Debug("fetched data", zap.String("response", ans), zap.Error(err))
+			ans, respErr := logHTTPResponse(res)
+			log.Debug("fetched data", zap.String("response", ans), zap.Error(respErr))
 		}
 	}
-	if err != nil || res.StatusCode >= 400 {
+	if err != nil || (res != nil && res.StatusCode >= 400) {
 		log.Warn("request failed", zap.Error(err))
 		return g.Execute(ctx)
 	}

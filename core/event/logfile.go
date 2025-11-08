@@ -100,7 +100,6 @@ func (lf *LogFile) BuildTickChannel() abstraction.EventChannel {
 		}
 		for {
 			data, err := reader.ReadString(byte(0))
-			lf.logger.Debug("failed to read line", zap.String("data", data), zap.Error(err))
 			if err != nil && err != io.EOF {
 				lf.logger.Error("error reading log file", zap.Error(err))
 				return

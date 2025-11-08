@@ -68,10 +68,10 @@ func (s *CronString) parseAsSpec(
 	specs := make([]cronSpec, 0)
 	lines := s.sanitize().lines()
 	matcher, parser, err := buildMapper(hasUser, pattern)
-	log.Debug("parsing lines using line matcher", zap.String("matcher", matcher.String()))
 	if err != nil {
 		return []cronSpec{}, err
 	}
+	log.Debug("parsing lines using line matcher", zap.String("matcher", matcher.String()))
 	for num, line := range lines {
 		l := cronLine{line}
 		if env, err := l.exportEnv(); len(env) > 0 {

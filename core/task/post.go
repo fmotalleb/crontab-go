@@ -96,7 +96,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 	}
 
 	req, err := http.NewRequestWithContext(localCtx, http.MethodPost, p.address, dataReader)
-	log.Debug("sending get http request")
+	log.Debug("sending post http request")
 	if err != nil {
 		log.Warn("cannot create the request (pre-send)", zap.Error(err))
 		return p.Execute(ctx)
@@ -119,13 +119,12 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 		log = log.With(zap.Int("status", res.StatusCode))
 		log.Info("received response with status", zap.String("status", res.Status))
 		if log.Level() >= zap.DebugLevel {
-			var ans string
-			ans, err = logHTTPResponse(res)
-			log.Debug("fetched data", zap.String("response", ans), zap.Error(err))
+			ans, respErr := logHTTPResponse(res)
+			log.Debug("fetched data", zap.String("response", ans), zap.Error(respErr))
 		}
 	}
 
-	if err != nil || res.StatusCode >= 400 {
+	if err != nil || (res != nil && res.StatusCode >= 400) {
 		log.Warn("request failed", zap.Error(err))
 		return p.Execute(ctx)
 	}

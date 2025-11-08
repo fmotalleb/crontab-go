@@ -52,5 +52,5 @@ func IncreaseRetry(ctx context.Context) context.Context {
 }
 
 func ResetRetries(ctx context.Context) context.Context {
-	return context.WithValue(ctx, ctxutils.RetryCountKey, 0)
+	return context.WithValue(ctx, ctxutils.RetryCountKey, RetryCount(0))
 }
