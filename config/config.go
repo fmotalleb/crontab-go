@@ -88,6 +88,9 @@ type Task struct {
 	// Hooks
 	OnDone []Task `mapstructure:"on-done" json:"on-done,omitempty"`
 	OnFail []Task `mapstructure:"on-fail" json:"on-fail,omitempty"`
+
+	// Misc
+	Vars map[string]string `mapstructure:"vars" json:"vars,omitempty"`
 }
 
 // TaskConnection represents the connection configuration for a task.

@@ -133,7 +133,7 @@ func (d *DockerAttachConnection) Execute() ([]byte, error) {
 	d.log.Debug("output of stdout is fetched", zap.Int64("bytes", wrote))
 	if err != nil {
 		d.log.Debug("copy of std is failed", zap.Int64("until-err", wrote), zap.Error(err))
-		return nil, err
+		return writer.Bytes(), err
 	}
 	return writer.Bytes(), nil
 }

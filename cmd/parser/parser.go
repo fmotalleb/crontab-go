@@ -54,7 +54,7 @@ func run(cmd *cobra.Command, _ []string) {
 }
 
 func writeOutput(log *zap.Logger, cfg *parserConfig, result string) {
-	outputFile, err := os.OpenFile(cfg.output, os.O_WRONLY|os.O_CREATE, 0o644)
+	outputFile, err := os.OpenFile(cfg.output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		log.Panic("failed to open output file", zap.Error(err))
 	}

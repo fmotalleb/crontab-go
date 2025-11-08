@@ -27,6 +27,7 @@ func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, boo
 		address: task.Post,
 		headers: &task.Headers,
 		data:    &task.Data,
+		task:    task,
 		log: logger.With(
 			zap.String("url", task.Post),
 			zap.String("method", "post"),
@@ -44,6 +45,7 @@ type Post struct {
 	common.Cancelable
 	common.Retry
 	common.Timeout
+	task *config.Task
 
 	address string
 	headers *map[string]string
@@ -53,6 +55,7 @@ type Post struct {
 
 // Execute implements abstraction.Executable.
 func (p *Post) Execute(ctx context.Context) (e error) {
+	ctx = populateVars(ctx, p.task)
 	r := common.GetRetry(ctx)
 	log := p.log.With(
 		zap.Any("retry", r),
@@ -73,6 +76,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 		p.DoFailHooks(ctx)
 		return err
 	}
+
 	ctx = common.IncreaseRetry(ctx)
 
 	var localCtx context.Context
@@ -92,7 +96,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 	}
 
 	req, err := http.NewRequestWithContext(localCtx, http.MethodPost, p.address, dataReader)
-	log.Debug("sending get http request")
+	log.Debug("sending post http request")
 	if err != nil {
 		log.Warn("cannot create the request (pre-send)", zap.Error(err))
 		return p.Execute(ctx)
@@ -115,12 +119,12 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 		log = log.With(zap.Int("status", res.StatusCode))
 		log.Info("received response with status", zap.String("status", res.Status))
 		if log.Level() >= zap.DebugLevel {
-			ans, err := logHTTPResponse(res)
-			log.Debug("fetched data", zap.String("response", ans), zap.Error(err))
+			ans, respErr := logHTTPResponse(res)
+			log.Debug("fetched data", zap.String("response", ans), zap.Error(respErr))
 		}
 	}
 
-	if err != nil || res.StatusCode >= 400 {
+	if err != nil || (res != nil && res.StatusCode >= 400) {
 		log.Warn("request failed", zap.Error(err))
 		return p.Execute(ctx)
 	}

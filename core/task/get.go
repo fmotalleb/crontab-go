@@ -23,6 +23,7 @@ func NewGet(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool
 	}
 	get := &Get{
 		address: task.Get,
+		task:    task,
 		headers: &task.Headers,
 		log: logger.With(
 			zap.String("url", task.Get),
@@ -41,7 +42,7 @@ type Get struct {
 	common.Cancelable
 	common.Retry
 	common.Timeout
-
+	task    *config.Task
 	address string
 	headers *map[string]string
 	log     *zap.Logger
@@ -49,6 +50,7 @@ type Get struct {
 
 // Execute implements abstraction.Executable.
 func (g *Get) Execute(ctx context.Context) (e error) {
+	ctx = populateVars(ctx, g.task)
 	r := common.GetRetry(ctx)
 	log := g.log.With(
 		zap.Any("retry", r),
@@ -97,11 +99,11 @@ func (g *Get) Execute(ctx context.Context) (e error) {
 		log.Info("received response with status", zap.String("status", res.Status))
 
 		if log.Level() >= zap.DebugLevel {
-			ans, err := logHTTPResponse(res)
-			log.Debug("fetched data", zap.String("response", ans), zap.Error(err))
+			ans, respErr := logHTTPResponse(res)
+			log.Debug("fetched data", zap.String("response", ans), zap.Error(respErr))
 		}
 	}
-	if err != nil || res.StatusCode >= 400 {
+	if err != nil || (res != nil && res.StatusCode >= 400) {
 		log.Warn("request failed", zap.Error(err))
 		return g.Execute(ctx)
 	}

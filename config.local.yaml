@@ -3,11 +3,13 @@
 jobs:
   - name: echo
     tasks:
-      - command: echo {{ now | date "2006-01-02_15-04-05" }}
+      - command: echo {{ .Vars.name }}; sleep 5sec
+        vars:
+          name: '{{ now | date "2006-01-02_15-04-05" }}'
         env:
           COLE: test
         on-done:
-          - command: echo test $env.COLE
+          - command: echo {{ .Vars.name }}
         # connections:
         #   - image: "library/alpine"
 

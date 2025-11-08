@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// Validate NOOP if user and group are empty log a warning if not and always returns nil
+// Validate NOOP if user and group are empty log a warning if not and always returns nil.
 func Validate(log *zap.Logger, usr string, grp string) error {
 	if usr == "" && grp == "" {
 		return nil // skip warn message if no user and group provided
@@ -19,6 +19,6 @@ func Validate(log *zap.Logger, usr string, grp string) error {
 	return nil
 }
 
-// SetUser NOOP
+// SetUser NOOP.
 func SetUser(_ *zap.Logger, _ *exec.Cmd, _ string, _ string) {
 }

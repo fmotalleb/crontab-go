@@ -51,6 +51,7 @@ type Command struct {
 
 // Execute implements abstraction.Executable.
 func (c *Command) Execute(ctx context.Context) (e error) {
+	ctx = populateVars(ctx, c.task)
 	r := common.GetRetry(ctx)
 	log := c.log.With(
 		zap.Any("retry", r),
