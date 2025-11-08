@@ -5,7 +5,9 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/fmotalleb/go-tools/log"
 	"github.com/fmotalleb/go-tools/template"
+	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/ctxutils"
@@ -38,7 +40,16 @@ func populateVars(ctx context.Context, task *config.Task) context.Context {
 	}
 	varTable := old
 	for k, v := range task.Vars {
-		varTable[k], _ = template.EvaluateTemplate(v, varTable)
+		var err error
+		varTable[k], err = template.EvaluateTemplate(v, varTable)
+		if err != nil {
+			log.Of(ctx).Error(
+				"failed to evaluate template on variable",
+				zap.String("key", k),
+				zap.String("value", v),
+				zap.Error(err),
+			)
+		}
 	}
 	return context.WithValue(ctx, ctxutils.Vars, varTable)
 }

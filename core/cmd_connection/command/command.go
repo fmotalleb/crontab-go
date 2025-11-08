@@ -4,6 +4,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"strings"
 
@@ -116,7 +117,7 @@ func (ctx Ctx) applyEventTemplate(src string) (string, error) {
 		ctx.logger.Warn("Event not found in context")
 		return src, nil
 	}
-	data := event.GetData()
+	data := maps.Clone(event.GetData())
 	vars := ctx.getVars()
 	data["Vars"] = vars
 	return applyTemplate(ctx.logger, src, data)
