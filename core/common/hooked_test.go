@@ -7,8 +7,8 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 type mockExecutable struct {

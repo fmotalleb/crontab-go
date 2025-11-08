@@ -1,4 +1,4 @@
-module github.com/FMotalleb/crontab-go
+module github.com/fmotalleb/crontab-go
 
 go 1.25.0
 

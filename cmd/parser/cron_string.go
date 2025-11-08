@@ -8,7 +8,7 @@ import (
 	"github.com/fmotalleb/go-tools/log"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 type CronString struct {

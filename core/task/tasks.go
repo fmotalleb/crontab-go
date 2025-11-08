@@ -5,9 +5,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/generator"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/generator"
 )
 
 var tg = generator.New[*config.Task, abstraction.Executable]()

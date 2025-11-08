@@ -5,7 +5,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 var failJob config.JobConfig = config.JobConfig{

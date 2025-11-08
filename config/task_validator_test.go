@@ -6,7 +6,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 func TestTaskValidate_NegativeTimeout(t *testing.T) {

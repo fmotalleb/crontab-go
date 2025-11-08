@@ -6,8 +6,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
-	connection "github.com/FMotalleb/crontab-go/core/cmd_connection"
+	"github.com/fmotalleb/crontab-go/config"
+	connection "github.com/fmotalleb/crontab-go/core/cmd_connection"
 )
 
 func TestCompileConnection_NoValidConnectionType(t *testing.T) {

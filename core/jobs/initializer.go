@@ -6,12 +6,12 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/event"
-	"github.com/FMotalleb/crontab-go/core/task"
-	"github.com/FMotalleb/crontab-go/core/utils"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/event"
+	"github.com/fmotalleb/crontab-go/core/task"
+	"github.com/fmotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 func initEventSignal(events []abstraction.EventGenerator, logger *zap.Logger) abstraction.EventChannel {

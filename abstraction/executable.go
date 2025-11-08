@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 // Executable is an object that can be executed using a execute method and stopped using cancel method.

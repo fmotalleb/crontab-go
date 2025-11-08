@@ -9,10 +9,10 @@ import (
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/concurrency"
-	"github.com/FMotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/concurrency"
+	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
 func init() {

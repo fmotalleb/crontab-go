@@ -13,8 +13,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/core/concurrency"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/core/concurrency"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 func ctxKey(prefix string, key string) ctxutils.ContextKey {

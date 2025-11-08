@@ -22,11 +22,11 @@ import (
 
 	"github.com/robfig/cron/v3"
 
-	"github.com/FMotalleb/crontab-go/cmd"
-	"github.com/FMotalleb/crontab-go/core/global"
-	"github.com/FMotalleb/crontab-go/core/jobs"
-	"github.com/FMotalleb/crontab-go/core/webserver"
-	"github.com/FMotalleb/crontab-go/meta"
+	"github.com/fmotalleb/crontab-go/cmd"
+	"github.com/fmotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/core/jobs"
+	"github.com/fmotalleb/crontab-go/core/webserver"
+	"github.com/fmotalleb/crontab-go/meta"
 )
 
 func initializeGlobalState() {

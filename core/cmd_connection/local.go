@@ -10,10 +10,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/cmd_connection/command"
-	credential "github.com/FMotalleb/crontab-go/core/os_credential"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/cmd_connection/command"
+	credential "github.com/fmotalleb/crontab-go/core/os_credential"
 )
 
 func init() {

@@ -7,11 +7,11 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/config"
-	connection "github.com/FMotalleb/crontab-go/core/cmd_connection"
-	"github.com/FMotalleb/crontab-go/core/common"
-	"github.com/FMotalleb/crontab-go/helpers"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/config"
+	connection "github.com/fmotalleb/crontab-go/core/cmd_connection"
+	"github.com/fmotalleb/crontab-go/core/common"
+	"github.com/fmotalleb/crontab-go/helpers"
 )
 
 func init() {

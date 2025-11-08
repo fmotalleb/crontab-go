@@ -6,7 +6,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 func TestJobEvent_Validate_WebEvent(t *testing.T) {

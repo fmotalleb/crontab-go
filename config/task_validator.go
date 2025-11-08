@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	credential "github.com/FMotalleb/crontab-go/core/os_credential"
+	credential "github.com/fmotalleb/crontab-go/core/os_credential"
 )
 
 // Validate checks the validity of a Task.

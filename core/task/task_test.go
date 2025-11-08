@@ -7,9 +7,9 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/task"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/task"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 func TestCompileTask_NonExistingTask(t *testing.T) {

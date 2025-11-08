@@ -1,11 +1,11 @@
 # Cronjob-go
 
 [![Keep a Changelog](https://img.shields.io/badge/changelog-Keep%20a%20Changelog-%23E05735)](CHANGELOG.md)
-[![GitHub Release](https://img.shields.io/github/v/release/FMotalleb/crontab-go)](https://github.com/FMotalleb/crontab-go/releases)
-[![Go Reference](https://pkg.go.dev/badge/github.com/FMotalleb/crontab-go.svg)](https://pkg.go.dev/github.com/FMotalleb/crontab-go)
+[![GitHub Release](https://img.shields.io/github/v/release/FMotalleb/crontab-go)](https://github.com/fmotalleb/crontab-go/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/fmotalleb/crontab-go.svg)](https://pkg.go.dev/github.com/fmotalleb/crontab-go)
 [![go.mod](https://img.shields.io/github/go-mod/go-version/FMotalleb/crontab-go)](go.mod)
 [![LICENSE](https://img.shields.io/github/license/FMotalleb/crontab-go)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/FMotalleb/crontab-go)](https://goreportcard.com/report/github.com/FMotalleb/crontab-go)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fmotalleb/crontab-go)](https://goreportcard.com/report/github.com/fmotalleb/crontab-go)
 [![Codecov](https://codecov.io/gh/FMotalleb/crontab-go/branch/main/graph/badge.svg)](https://codecov.io/gh/FMotalleb/crontab-go)
 
 ⭐ `Star` this repository if you find it valuable and worth maintaining.
@@ -63,7 +63,7 @@ This section outlines the configuration options available for the application.
 
 > By adding this line in the `config.yaml` file you can enable the schema.
 >
-> `# yaml-language-server: $schema=https://github.com/FMotalleb/crontab-go/raw/main/schema.json`
+> `# yaml-language-server: $schema=https://github.com/fmotalleb/crontab-go/raw/main/schema.json`
 
 ## Getting Started
 

@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/FMotalleb/crontab-go/cmd/parser"
-	"github.com/FMotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/cmd/parser"
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 var (

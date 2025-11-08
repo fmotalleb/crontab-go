@@ -10,9 +10,9 @@ import (
 	"github.com/fmotalleb/go-tools/template"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/abstraction"
-	"github.com/FMotalleb/crontab-go/core/utils"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/abstraction"
+	"github.com/fmotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 type Ctx struct {

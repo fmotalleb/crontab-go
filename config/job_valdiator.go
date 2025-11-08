@@ -7,7 +7,7 @@ import (
 	"github.com/docker/docker/api/types/events"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
 var acceptedActions = utils.NewList(

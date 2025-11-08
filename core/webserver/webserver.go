@@ -11,8 +11,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/core/webserver/endpoint"
-	"github.com/FMotalleb/crontab-go/helpers"
+	"github.com/fmotalleb/crontab-go/core/webserver/endpoint"
+	"github.com/fmotalleb/crontab-go/helpers"
 )
 
 type AuthConfig struct {

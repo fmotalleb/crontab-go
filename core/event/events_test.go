@@ -8,9 +8,9 @@ import (
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/core/event"
-	"github.com/FMotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/event"
+	"github.com/fmotalleb/crontab-go/core/global"
 )
 
 func prepareState() {

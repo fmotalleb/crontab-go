@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/assert/v2"
 
-	"github.com/FMotalleb/crontab-go/core/utils"
+	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
 func TestSelector(t *testing.T) {

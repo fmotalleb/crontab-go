@@ -5,8 +5,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/FMotalleb/crontab-go/config"
-	"github.com/FMotalleb/crontab-go/ctxutils"
+	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 func logHTTPResponse(r *http.Response) (string, error) {
