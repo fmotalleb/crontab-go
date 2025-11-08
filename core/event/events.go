@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/sirupsen/logrus"
 
@@ -27,9 +28,16 @@ type MetaData struct {
 }
 
 func NewMetaData(emitter string, extra map[string]any) *MetaData {
+	var e map[string]any
+	if extra != nil {
+		e = maps.Clone(extra)
+	} else {
+		e = make(map[string]any)
+	}
+	e["emitter"] = emitter
 	return &MetaData{
 		Emitter: emitter,
-		Extra:   extra,
+		Extra:   e,
 	}
 }
 
@@ -43,10 +51,5 @@ func NewErrMetaData(emitter string, err error) *MetaData {
 }
 
 func (m *MetaData) GetData() map[string]any {
-	result := m.Extra
-	if m.Extra == nil {
-		result = make(map[string]any)
-	}
-	result["emitter"] = m.Emitter
-	return result
+	return m.Extra
 }
