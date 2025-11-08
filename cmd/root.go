@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/fmotalleb/go-tools/env"
 	"github.com/fmotalleb/go-tools/git"
 	"github.com/fmotalleb/go-tools/log"
 	"github.com/joho/godotenv"
@@ -50,6 +51,22 @@ func Execute() {
 func init() {
 	_ = godotenv.Load()
 
+	if ll := os.Getenv("LOG_LEVEL"); ll != "" {
+		os.Setenv("ZAPLOG_LEVEL", ll)
+	}
+	if ltf := os.Getenv("LOG_TIMESTAMP_FORMAT"); ltf != "" {
+		os.Setenv("ZAPLOG_TIME_FORMAT", ltf)
+	}
+	logStdout := env.BoolOr("LOG_STDOUT", false)
+	if lf := os.Getenv("LOG_FILE"); lf != "" {
+		rlf := lf
+		if logStdout {
+			rlf = "stdout," + lf
+		}
+		os.Setenv("ZAPLOG_OUTPUT_PATHS", rlf)
+		os.Setenv("ZAPLOG_ERROR_PATHS", rlf)
+	}
+
 	rootCmd.AddCommand(parser.ParserCmd)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is config.yaml)")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable debug logger")
@@ -59,7 +76,7 @@ func init() {
 
 func warnOnErr(err error, message string) {
 	if err != nil {
-		fmt.Printf("%s, %w", message, err)
+		fmt.Printf("%s, %v", message, err)
 	}
 }
 
@@ -102,37 +119,6 @@ func initConfig() {
 }
 
 func setupEnv() {
-	viper.SetDefault("log_timestamp_format", "2006-01-02T15:04:05Z07:00")
-	warnOnErr(
-		viper.BindEnv(
-			"log_timestamp_format",
-			"timestamp_format",
-		),
-		"Cannot bind log_timestamp_format env variable: %s",
-	)
-	viper.SetDefault("log_format", "ansi")
-	warnOnErr(
-		viper.BindEnv(
-			"log_format",
-			"output_format",
-		),
-		"Cannot bind log_format env variable: %s",
-	)
-	warnOnErr(
-		viper.BindEnv(
-			"log_file",
-			"output_file",
-		),
-		"Cannot bind log_file env variable: %s",
-	)
-	viper.SetDefault("log_stdout", true)
-	warnOnErr(
-		viper.BindEnv(
-			"log_stdout",
-			"print",
-		),
-		"Cannot bind log_stdout env variable: %s",
-	)
 	warnOnErr(
 		viper.BindEnv(
 			"webserver_port",
@@ -170,15 +156,6 @@ func setupEnv() {
 			"username",
 		),
 		"Cannot bind webserver_username env variable: %s",
-	)
-
-	viper.SetDefault("log_level", "info")
-	warnOnErr(
-		viper.BindEnv(
-			"log_level",
-			"level",
-		),
-		"Cannot bind log_level env variable: %s",
 	)
 
 	warnOnErr(
