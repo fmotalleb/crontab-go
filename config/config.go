@@ -3,19 +3,10 @@ package config
 
 import (
 	"time"
-
-	"github.com/FMotalleb/crontab-go/enums"
 )
 
 // Config represents the configuration for the crontab application.
 type Config struct {
-	// Log configs
-	LogTimestampFormat string                 `mapstructure:"log_timestamp_format" json:"log_timestamp_format,omitempty"`
-	LogFormat          enums.LoggerFormatType `mapstructure:"log_format" json:"log_format,omitempty"`
-	LogFile            string                 `mapstructure:"log_file" json:"log_file,omitempty"`
-	LogStdout          bool                   `mapstructure:"log_stdout" json:"log_stdout,omitempty"`
-	LogLevel           enums.LogLevel         `mapstructure:"log_level" json:"log_level,omitempty"`
-
 	// Command executor configs
 	Shell     string   `mapstructure:"shell" json:"shell,omitempty"`
 	ShellArgs []string `mapstructure:"shell_args" json:"shell_args,omitempty"`

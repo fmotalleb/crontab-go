@@ -12,15 +12,6 @@ import (
 // Otherwise, it returns nil.
 func (cfg *Config) Validate() error {
 	log := log.NewBuilder().FromEnv().MustBuild().Named("Config.Validator")
-	// Validate log format
-	if err := cfg.LogFormat.Validate(); err != nil {
-		return err
-	}
-
-	// Validate log level
-	if err := cfg.LogLevel.Validate(); err != nil {
-		return err
-	}
 
 	if err := validateWebserverConfig(cfg); err != nil {
 		return err
