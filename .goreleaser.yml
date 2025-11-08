@@ -85,7 +85,7 @@ archives:
 
 release:
   github:
-    owner: FMotalleb
+    owner: fmotalleb
     name: crontab-go
   name_template: "{{.Version}}"
   prerelease: auto

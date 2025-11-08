@@ -64,7 +64,7 @@
   ],
   "json.schemaDownload.enable": true,
   "yaml.schemas": {
-    "https://raw.githubusercontent.com/FMotalleb/crontab-go/main/schema.json": [
+    "https://raw.githubusercontent.com/fmotalleb/crontab-go/main/schema.json": [
       "config.example.yaml",
       "config.yaml",
       "config.doc.yaml"

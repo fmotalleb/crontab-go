@@ -44,7 +44,7 @@ func run(cmd *cobra.Command, _ []string) {
 	if err != nil {
 		log.Panic("failed to generate yaml", zap.Error(err))
 	}
-	fmt.Println("# yaml-language-server: $schema=https://raw.githubusercontent.com/FMotalleb/crontab-go/main/schema.json")
+	fmt.Println("# yaml-language-server: $schema=https://raw.githubusercontent.com/fmotalleb/crontab-go/main/schema.json")
 	fmt.Println(result)
 	if cfg.output != "" {
 		writeOutput(log, cfg, result)

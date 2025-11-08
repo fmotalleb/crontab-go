@@ -5,10 +5,9 @@ jobs:
     tasks:
       - command: echo {{ now | date "2006-01-02_15-04-05" }}
         env:
-          SHELL: /bin/sh
           COLE: test
         on-done:
-          - command: echo 'test $$COLE'
+          - command: echo test $env.COLE
         # connections:
         #   - image: "library/alpine"
 
