@@ -3,25 +3,16 @@ package task
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/FMotalleb/crontab-go/config"
 	"github.com/FMotalleb/crontab-go/ctxutils"
 )
 
-func logHTTPResponse(r *http.Response) logrus.LogFunction {
-	return func() []any {
-		result := bytes.NewBuffer([]byte{})
-		err := r.Write(result)
-		return []any{
-			fmt.Sprintf("error: %v", err),
-			"\n",
-			result.String(),
-		}
-	}
+func logHTTPResponse(r *http.Response) (string, error) {
+	result := bytes.NewBuffer([]byte{})
+	err := r.Write(result)
+	return result.String(), err
 }
 
 func getFailedConnections(ctx context.Context) []config.TaskConnection {

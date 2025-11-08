@@ -3,8 +3,9 @@ package task
 
 import (
 	"context"
+	"time"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -18,17 +19,17 @@ func init() {
 }
 
 func NewCommand(
-	logger *logrus.Entry,
+	logger *zap.Logger,
 	task *config.Task,
 ) (abstraction.Executable, bool) {
 	if task.Command == "" {
 		return nil, false
 	}
-	log := logger.WithField("command", task.Command)
 	cmd := &Command{
-		log: log.WithField(
-			"command", task.Command,
+		log: logger.With(
+			zap.String("command", task.Command),
 		),
+
 		task: task,
 	}
 	cmd.SetMaxRetry(task.Retries)
@@ -45,21 +46,24 @@ type Command struct {
 	common.Timeout
 
 	task *config.Task
-	log  *logrus.Entry
+	log  *zap.Logger
 }
 
 // Execute implements abstraction.Executable.
 func (c *Command) Execute(ctx context.Context) (e error) {
 	r := common.GetRetry(ctx)
-	log := c.log.WithField("retry", r)
+	log := c.log.With(
+		zap.Any("retry", r),
+		zap.Time("start", time.Now()),
+	)
 	defer func() {
 		err := recover()
 		if err != nil {
 			if err, ok := err.(error); ok {
-				log = log.WithError(err)
-				e = err
+				log.Warn("recovering command execution from a fatal error", zap.Error(err))
+				return
 			}
-			log.Warnf("recovering command execution from a fatal error: %s", err)
+			log.Warn("a non-error panic accord", zap.Any("error", err))
 		}
 	}()
 
@@ -82,17 +86,15 @@ func (c *Command) Execute(ctx context.Context) (e error) {
 		log.Debug("no explicit Connection provided using local task connection by default")
 	}
 	for _, conn := range connections {
-		l := log.WithFields(
-			logrus.Fields{
-				"is-local": conn.Local,
-			},
+		l := log.With(
+			zap.Any("is-local", conn.Local),
 		)
 		connection := connection.Get(&conn, l)
 		cmdCtx, cancel := c.ApplyTimeout(ctx)
 		c.SetCancel(cancel)
 
 		if err := connection.Prepare(cmdCtx, c.task); err != nil {
-			l.Warn("cannot prepare command: ", err)
+			l.Warn("cannot prepare command", zap.Error(err))
 			ctx = addFailedConnections(ctx, conn)
 			helpers.WarnOnErrIgnored(
 				l,
@@ -103,7 +105,7 @@ func (c *Command) Execute(ctx context.Context) (e error) {
 		}
 
 		if err := connection.Connect(); err != nil {
-			l.Warn("error when tried to connect, exiting current remote", err)
+			l.Warn("error when tried to connect, exiting current remote", zap.Error(err))
 			ctx = addFailedConnections(ctx, conn)
 			continue
 		}
@@ -111,9 +113,9 @@ func (c *Command) Execute(ctx context.Context) (e error) {
 		if err != nil {
 			ctx = addFailedConnections(ctx, conn)
 		}
-		l.Infof("command finished with answer: %s, error: %s", ans, err)
+		l.Info("command finished", zap.ByteString("result", ans), zap.Error(err))
 		if err := connection.Disconnect(); err != nil {
-			l.Warn("error when tried to disconnect", err)
+			l.Warn("error when tried to disconnect", zap.Error(err))
 			ctx = addFailedConnections(ctx, conn)
 			continue
 		}

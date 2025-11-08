@@ -4,7 +4,7 @@ package abstraction
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/config"
 )
@@ -18,4 +18,4 @@ type Executable interface {
 	Cancel()
 }
 
-type ExecutableMaker func(*logrus.Entry, *config.Task) Executable
+type ExecutableMaker func(*zap.Logger, *config.Task) Executable

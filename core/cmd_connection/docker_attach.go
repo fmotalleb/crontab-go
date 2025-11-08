@@ -7,7 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -20,7 +20,7 @@ func init() {
 
 type DockerAttachConnection struct {
 	conn        *config.TaskConnection
-	log         *logrus.Entry
+	log         *zap.Logger
 	cli         *client.Client
 	execCFG     *container.ExecOptions
 	containerID string
@@ -30,21 +30,19 @@ type DockerAttachConnection struct {
 // NewDockerAttachConnection creates a new DockerAttachConnection instance.
 // It initializes the connection configuration and logging fields.
 // Parameters:
-// - log: A logrus.Entry instance for logging purposes.
+// - log: A zap.Logger instance for logging purposes.
 // - conn: A TaskConnection instance containing the connection configuration.
 // Returns:
 // - A new instance of DockerAttachConnection implementing the CmdConnection interface.
-func NewDockerAttachConnection(log *logrus.Entry, conn *config.TaskConnection) (abstraction.CmdConnection, bool) {
+func NewDockerAttachConnection(log *zap.Logger, conn *config.TaskConnection) (abstraction.CmdConnection, bool) {
 	if conn.ContainerName == "" {
 		return nil, false
 	}
 	res := &DockerAttachConnection{
 		conn: conn,
-		log: log.WithFields(
-			logrus.Fields{
-				"connection":  "docker",
-				"docker-mode": "attach",
-			},
+		log: log.With(
+			zap.String("connection", "docker"),
+			zap.String("docker-mode", "attach"),
 		),
 	}
 	return res, true
@@ -132,8 +130,9 @@ func (d *DockerAttachConnection) Execute() ([]byte, error) {
 	writer := bytes.NewBuffer([]byte{})
 	// Print the command output
 	wrote, err := io.Copy(writer, resp.Reader)
-	d.log.Debugf("wrote %d bytes to stdout", wrote)
+	d.log.Debug("output of stdout is fetched", zap.Int64("bytes", wrote))
 	if err != nil {
+		d.log.Debug("copy of std is failed", zap.Int64("until-err", wrote), zap.Error(err))
 		return nil, err
 	}
 	return writer.Bytes(), nil

@@ -9,7 +9,9 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/fmotalleb/go-tools/log"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/core/concurrency"
 	"github.com/FMotalleb/crontab-go/ctxutils"
@@ -37,6 +39,10 @@ type (
 
 func newGlobalContext() *Context {
 	ctx := context.Background()
+	ctx, err := log.WithNewEnvLogger(ctx)
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize logger: %w", err))
+	}
 	ctx, _ = signal.NotifyContext(ctx, os.Interrupt, os.Kill)
 	ctx = context.WithValue(
 		ctx,
@@ -92,4 +98,8 @@ func Get[T any]() T {
 		return zero
 	}
 	return castedValue
+}
+
+func Logger(name string) *zap.Logger {
+	return log.Of(c).Named(name)
 }

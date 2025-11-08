@@ -3,7 +3,7 @@ package task
 import (
 	"context"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -12,10 +12,10 @@ import (
 
 var tg = generator.New[*config.Task, abstraction.Executable]()
 
-func Build(ctx context.Context, log *logrus.Entry, cfg config.Task) abstraction.Executable {
+func Build(ctx context.Context, log *zap.Logger, cfg config.Task) abstraction.Executable {
 	exe, ok := tg.Get(log, &cfg)
 	if !ok {
-		log.Panic("did not received any executable action from given task", cfg)
+		log.Panic("did not received any executable action from given task", zap.Any("config", cfg))
 	}
 	onDone := []abstraction.Executable{}
 	for _, d := range cfg.OnDone {

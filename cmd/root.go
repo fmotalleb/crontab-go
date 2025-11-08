@@ -2,12 +2,13 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"runtime"
 
 	"github.com/fmotalleb/go-tools/git"
+	"github.com/fmotalleb/go-tools/log"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -29,6 +30,11 @@ With its seamless integration and easy-to-use YAML configuration,
 Cronjob-go simplifies the process of scheduling and managing recurring tasks
 within your containerized applications.`,
 	Version: git.String(),
+	PreRun: func(cmd *cobra.Command, _ []string) {
+		if verbose, _ := cmd.Flags().GetBool("verbose"); verbose {
+			log.SetDebugDefaults()
+		}
+	},
 	Run: func(_ *cobra.Command, _ []string) {
 		initConfig()
 	},
@@ -46,19 +52,20 @@ func init() {
 
 	rootCmd.AddCommand(parser.ParserCmd)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is config.yaml)")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable debug logger")
 
 	// cobra.OnInitialize()
 }
 
 func warnOnErr(err error, message string) {
 	if err != nil {
-		logrus.Warnf(message, err)
+		fmt.Printf("%s, %w", message, err)
 	}
 }
 
 func panicOnErr(err error, message string) {
 	if err != nil {
-		logrus.Panicf(message, err)
+		panic(fmt.Errorf("%s, %w", message, err))
 	}
 }
 
@@ -89,7 +96,7 @@ func initConfig() {
 		"Cannot unmarshal the config file: %s",
 	)
 	panicOnErr(
-		CFG.Validate(logrus.WithField("section", "config.validation")),
+		CFG.Validate(),
 		"Failed to initialize config file: %s",
 	)
 }

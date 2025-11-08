@@ -1,32 +1,30 @@
 // Package helpers provides helper functions.
 package helpers
 
-import (
-	"github.com/sirupsen/logrus"
-)
+import "go.uber.org/zap"
 
-func PanicOnErr(log *logrus.Entry, errorCatcher func() error, message string) {
+func PanicOnErr(log *zap.Logger, errorCatcher func() error, message string) {
 	if err := errorCatcher(); err != nil {
-		log.Panicf(message, err)
+		log.Panic(message, zap.Error(err))
 	}
 }
 
-func FatalOnErr(log *logrus.Entry, errorCatcher func() error, message string) {
+func FatalOnErr(log *zap.Logger, errorCatcher func() error, message string) {
 	if err := errorCatcher(); err != nil {
-		log.Fatalf(message, err)
+		log.Fatal(message, zap.Error(err))
 	}
 }
 
-func WarnOnErr(log *logrus.Entry, errorCatcher func() error, message string) error {
+func WarnOnErr(log *zap.Logger, errorCatcher func() error, message string) error {
 	if err := errorCatcher(); err != nil {
-		log.Warnf(message, err)
+		log.Warn(message, zap.Error(err))
 		return err
 	}
 	return nil
 }
 
-func WarnOnErrIgnored(log *logrus.Entry, errorCatcher func() error, message string) {
+func WarnOnErrIgnored(log *zap.Logger, errorCatcher func() error, message string) {
 	if err := errorCatcher(); err != nil {
-		log.Warnf(message, err)
+		log.Warn(message, zap.Error(err))
 	}
 }

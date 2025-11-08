@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/ctxutils"
@@ -12,7 +12,7 @@ import (
 
 func taskHandler(
 	c context.Context,
-	logger *logrus.Entry,
+	logger *zap.Logger,
 	signal abstraction.EventChannel,
 	tasks []abstraction.Executable,
 	doneHooks []abstraction.Executable,
@@ -21,7 +21,7 @@ func taskHandler(
 ) {
 	logger.Debug("Spawning task handler")
 	for event := range signal {
-		logger.Trace("Signal Received")
+		logger.Debug("Signal Received")
 		for _, task := range tasks {
 			c = context.WithValue(c, ctxutils.EventData, event)
 			go executeTask(c, task, doneHooks, failHooks, lock)

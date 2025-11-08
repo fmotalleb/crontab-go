@@ -7,7 +7,7 @@ import (
 
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/client"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -19,7 +19,7 @@ func init() {
 	eg.Register(newDockerGenerator)
 }
 
-func newDockerGenerator(log *logrus.Entry, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
+func newDockerGenerator(log *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.Docker != nil {
 		d := cfg.Docker
 		con := utils.FirstNonZeroForced(d.Connection,
@@ -50,7 +50,7 @@ type DockerEvent struct {
 	errorThreshold   uint
 	errorPolicy      config.ErrorLimitPolicy
 	errorThrottle    time.Duration
-	log              *logrus.Entry
+	log              *zap.Logger
 }
 
 func NewDockerEvent(
@@ -62,7 +62,7 @@ func NewDockerEvent(
 	errorLimit uint,
 	errorPolicy config.ErrorLimitPolicy,
 	errorThrottle time.Duration,
-	logger *logrus.Entry,
+	logger *zap.Logger,
 ) abstraction.EventGenerator {
 	return &DockerEvent{
 		connection:       connection,
@@ -86,7 +86,7 @@ func (de *DockerEvent) BuildTickChannel() abstraction.EventChannel {
 		client.WithAPIVersionNegotiation(),
 	)
 	if err != nil {
-		de.log.Warn("failed to connect to docker: ", err)
+		de.log.Warn("failed to connect to docker", zap.Error(err))
 		return de.BuildTickChannel()
 	}
 	go func() {
@@ -96,7 +96,7 @@ func (de *DockerEvent) BuildTickChannel() abstraction.EventChannel {
 		for {
 			select {
 			case err := <-err:
-				de.log.WithError(err).Warn("received an error from docker: ", err)
+				de.log.Warn("received an error from docker", zap.Error(err))
 				if de.errorThreshold == 0 {
 					continue
 				}
@@ -106,18 +106,18 @@ func (de *DockerEvent) BuildTickChannel() abstraction.EventChannel {
 				if errs >= de.errorThreshold {
 					switch de.errorPolicy {
 					case config.ErrorPolGiveUp:
-						de.log.Warnf("Received more than %d consecutive errors from docker, marking instance as unstable and giving up this instance, no events will be received anymore", errs)
+						de.log.Warn("consecutive errors from docker, marking instance as unstable and giving up this instance, no events will be received anymore", zap.Uint("errors", errs))
 						close(notifyChan)
 						return
 					case config.ErrorPolKill:
-						de.log.Fatalf("Received more than %d consecutive errors from docker, marking instance as unstable and killing in return, this may happen due to dockerd restarting", errs)
+						de.log.Fatal("consecutive errors from docker, marking instance as unstable and killing in return, this may happen due to dockerd restarting", zap.Uint("errors", errs))
 					case config.ErrorPolReconnect:
-						de.log.Warnf("Received more than %d consecutive errors from docker, marking instance as unstable and retry connecting to docker", errs)
+						de.log.Warn("consecutive errors from docker, marking instance as unstable and retry connecting to docker", zap.Uint("errors", errs))
 						for e := range de.BuildTickChannel() {
 							notifyChan <- e
 						}
 					default:
-						de.log.Fatalf("unexpected event.ErrorLimitPolicy: %#v, valid options are (kill,giv-up,reconnect)", de.errorPolicy)
+						de.log.Fatal("unexpected event.ErrorLimitPolicy, valid options are (kill,giv-up,reconnect)", zap.Any("policy", de.errorPolicy))
 					}
 					errCount.Set(0)
 				}
@@ -125,7 +125,7 @@ func (de *DockerEvent) BuildTickChannel() abstraction.EventChannel {
 					time.Sleep(de.errorThrottle)
 				}
 			case event := <-msg:
-				de.log.Trace("received an event from docker: ", event)
+				de.log.Debug("received an event from docker", zap.Any("event", event))
 				if de.matches(&event) {
 					notifyChan <- NewMetaData(
 						"docker",

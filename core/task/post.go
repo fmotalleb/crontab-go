@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -18,7 +19,7 @@ func init() {
 	tg.Register(NewPost)
 }
 
-func NewPost(logger *logrus.Entry, task *config.Task) (abstraction.Executable, bool) {
+func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool) {
 	if task.Post == "" {
 		return nil, false
 	}
@@ -26,11 +27,9 @@ func NewPost(logger *logrus.Entry, task *config.Task) (abstraction.Executable, b
 		address: task.Post,
 		headers: &task.Headers,
 		data:    &task.Data,
-		log: logger.WithFields(
-			logrus.Fields{
-				"url":    task.Post,
-				"method": "post",
-			},
+		log: logger.With(
+			zap.String("url", task.Post),
+			zap.String("method", "post"),
 		),
 	}
 	post.SetMaxRetry(task.Retries)
@@ -49,21 +48,24 @@ type Post struct {
 	address string
 	headers *map[string]string
 	data    *any
-	log     *logrus.Entry
+	log     *zap.Logger
 }
 
 // Execute implements abstraction.Executable.
 func (p *Post) Execute(ctx context.Context) (e error) {
 	r := common.GetRetry(ctx)
-	log := p.log.WithField("retry", r)
+	log := p.log.With(
+		zap.Any("retry", r),
+		zap.Time("start", time.Now()),
+	)
 	defer func() {
 		err := recover()
 		if err != nil {
 			if err, ok := err.(error); ok {
-				log = log.WithError(err)
-				e = err
+				log.Warn("recovering command execution from a fatal error", zap.Error(err))
+				return
 			}
-			log.Warnf("recovering command execution from a fatal error: %s", err)
+			log.Warn("a non-error panic accord", zap.Any("error", err))
 		}
 	}()
 
@@ -83,20 +85,16 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 	if p.data != nil {
 		data, err := json.Marshal(p.data)
 		if err != nil {
-			log.
-				WithError(err).
-				Warnln("cannot marshal the given body (pre-send)")
+			log.Warn("cannot marshal the given body (pre-send)", zap.Error(err))
 			return p.Execute(ctx)
 		}
 		dataReader = bytes.NewReader(data)
 	}
 
 	req, err := http.NewRequestWithContext(localCtx, http.MethodPost, p.address, dataReader)
-	log.Debugln("sending get http request")
+	log.Debug("sending get http request")
 	if err != nil {
-		log.
-			WithError(err).
-			Warnln("cannot create the request (pre-send)")
+		log.Warn("cannot create the request (pre-send)", zap.Error(err))
 		return p.Execute(ctx)
 	}
 
@@ -114,18 +112,16 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 				"cannot close response body: %s",
 			)
 		}
-		log = log.WithField("status", res.StatusCode)
-		log.Infoln("received response with status: ", res.Status)
-		if log.Logger.IsLevelEnabled(logrus.DebugLevel) {
-			logData := logHTTPResponse(res)
-			log.Debugln(logData()...)
+		log = log.With(zap.Int("status", res.StatusCode))
+		log.Info("received response with status", zap.String("status", res.Status))
+		if log.Level() >= zap.DebugLevel {
+			ans, err := logHTTPResponse(res)
+			log.Debug("fetched data", zap.String("response", ans), zap.Error(err))
 		}
 	}
 
 	if err != nil || res.StatusCode >= 400 {
-		log.
-			WithError(err).
-			Warnln("request failed")
+		log.Warn("request failed", zap.Error(err))
 		return p.Execute(ctx)
 	}
 

@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -22,18 +22,18 @@ func init() {
 
 // Local represents a local command connection.
 type Local struct {
-	log *logrus.Entry
+	log *zap.Logger
 	cmd *exec.Cmd
 }
 
 // NewLocalCMDConn creates a new instance of Local command connection.
-func NewLocalCMDConn(log *logrus.Entry, cfg *config.TaskConnection) (abstraction.CmdConnection, bool) {
+func NewLocalCMDConn(log *zap.Logger, cfg *config.TaskConnection) (abstraction.CmdConnection, bool) {
 	if !cfg.Local {
 		return nil, false
 	}
 	res := &Local{
-		log: log.WithField(
-			"connection", "local",
+		log: log.With(
+			zap.String("connection", "local"),
 		),
 	}
 	return res, true
@@ -59,24 +59,18 @@ func (l *Local) Prepare(ctx context.Context, task *config.Task) error {
 		shell,
 		commandArg...,
 	)
-	l.log = l.log.WithFields(
-		logrus.Fields{
-			"working_directory": workingDir,
-			"shell":             shell,
-			"shell_args":        commandArg,
-		},
+	l.log = l.log.With(
+		zap.String("cmd", task.Command),
+		zap.String("working_directory", workingDir),
+		zap.String("shell", shell),
+		zap.Strings("shell_args", commandArg),
 	)
 	credential.SetUser(l.log, l.cmd, task.UserName, task.GroupName)
 	l.cmd.Env = environ
 	l.cmd.Dir = workingDir
 
 	// Add additional logging fields if needed
-	l.log.WithFields(logrus.Fields{
-		"working_directory": workingDir,
-		"shell":             shell,
-		"shell_args":        commandArg,
-		"task":              task,
-	}).Debug("command prepared")
+	l.log.Debug("command prepared")
 
 	return nil
 }
@@ -100,15 +94,15 @@ func (l *Local) Execute() ([]byte, error) {
 	var res bytes.Buffer
 	l.cmd.Stdout = &res
 	l.cmd.Stderr = &res
+	log := l.log.Named("execute")
 	if err := l.cmd.Start(); err != nil {
-		l.log.WithError(err).Warn("failed to start the command")
+		log.Warn("failed to start the command", zap.Error(err))
 		return []byte{}, err
 	} else if err := l.cmd.Wait(); err != nil {
 		output := res.Bytes()
-		l.log.WithError(err).WithField("output", strings.TrimSpace(res.String())).Warn("command execution failed")
-		l.log.WithField("output", strings.TrimSpace(res.String())).Debug("command output")
+		log.Warn("command execution failed", zap.String("output", strings.TrimSpace(res.String())), zap.Error(err))
 		return output, err
 	}
-	l.log.WithField("output", strings.TrimSpace(res.String())).Debug("command output")
+	l.log.Debug("command output", zap.String("output", strings.TrimSpace(res.String())))
 	return res.Bytes(), nil
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"maps"
 
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -13,12 +13,12 @@ import (
 
 var eg = generator.New[*config.JobEvent, abstraction.EventGenerator]()
 
-func Build(log *logrus.Entry, cfg *config.JobEvent) abstraction.EventGenerator {
+func Build(log *zap.Logger, cfg *config.JobEvent) abstraction.EventGenerator {
 	if g, ok := eg.Get(log, cfg); ok {
 		return g
 	}
 	err := fmt.Errorf("no event generator matched %+v", *cfg)
-	log.WithError(err).Warn("event.Build: generator not found")
+	log.Warn("event.Build: generator not found", zap.Error(err))
 	return nil
 }
 

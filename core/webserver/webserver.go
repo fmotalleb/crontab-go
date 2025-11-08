@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/fmotalleb/go-tools/log"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/core/webserver/endpoint"
 	"github.com/FMotalleb/crontab-go/helpers"
-	"github.com/FMotalleb/crontab-go/logger"
 )
 
 type AuthConfig struct {
@@ -25,7 +25,7 @@ type WebServer struct {
 	ctx          context.Context
 	address      string
 	port         uint
-	log          *logrus.Entry
+	log          *zap.Logger
 	serveMetrics bool
 }
 
@@ -40,7 +40,7 @@ func NewWebServer(ctx context.Context,
 		address:      address,
 		port:         port,
 		AuthConfig:   authentication,
-		log:          logger.SetupLogger("WebServer"),
+		log:          log.Of(ctx).Named("WebServer"),
 		serveMetrics: serveMetrics,
 	}
 }
@@ -51,14 +51,14 @@ func (s *WebServer) Serve() {
 	if s.AuthConfig != nil && s.AuthConfig.Username != "" && s.AuthConfig.Password != "" {
 		auth = gin.BasicAuth(gin.Accounts{s.AuthConfig.Username: s.AuthConfig.Password})
 	} else {
-		s.log.Warnf("received no value on username or password, ignoring any authentication, if you intended to use no authentication ignore this message")
+		s.log.Warn("received no value on username or password, ignoring any authentication, if you intended to use no authentication ignore this message")
 	}
-	log := gin.LoggerWithConfig(gin.LoggerConfig{
-		Formatter: s.formatter,
-	})
+	// log := gin.LoggerWithConfig(gin.LoggerConfig{
+	// 	Formatter: gin.format,
+	// })
 	engine.Use(
 		auth,
-		log,
+		// log,
 		gin.Recovery(),
 	)
 
@@ -92,30 +92,4 @@ func (s *WebServer) Serve() {
 		},
 		"Failed to start webserver: %s",
 	)
-}
-
-func (s *WebServer) formatter(params gin.LogFormatterParams) string {
-	log := s.log.WithFields(
-		logrus.Fields{
-			"status_code": params.StatusCode,
-			"client_ip":   params.ClientIP,
-			"method":      params.Method,
-			"path":        params.Path,
-		},
-	)
-	if params.ErrorMessage != "" {
-		log = s.log.WithFields(
-			logrus.Fields{
-				"error": params.ErrorMessage,
-			},
-		)
-	}
-	log.Level = logrus.DebugLevel
-	log.Message = fmt.Sprintf("served a %s request in path: %s", params.Method, params.Path)
-	answer, err := log.String()
-	if err != nil {
-		log.WithError(err).Warn("cannot send log message to gin logger")
-		return ""
-	}
-	return answer
 }

@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 
 	"github.com/FMotalleb/crontab-go/abstraction"
 	"github.com/FMotalleb/crontab-go/config"
@@ -12,7 +12,7 @@ func init() {
 	eg.Register(newWebEventGenerator)
 }
 
-func newWebEventGenerator(_ *logrus.Entry, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
+func newWebEventGenerator(_ *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.WebEvent != "" {
 		return NewWebEventListener(cfg.WebEvent), true
 	}
