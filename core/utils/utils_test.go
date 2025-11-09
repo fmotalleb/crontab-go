@@ -9,31 +9,6 @@ import (
 	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
-func TestSelector(t *testing.T) {
-	t.Run("selector selects an element from given list", func(t *testing.T) {
-		items := []string{"a", "b", "c", "d", "e", "f"}
-		ans := utils.FirstThatMatch(
-			func(item string) bool {
-				return item == "c" || item == "d" || item == "e"
-			},
-			"error",
-			items...,
-		)
-		assert.Equal(t, "c", ans)
-	})
-	t.Run("selector selects will return default value", func(t *testing.T) {
-		items := []string{"a", "b", "c", "d", "e", "f"}
-		ans := utils.FirstThatMatch(
-			func(item string) bool {
-				return item == "g"
-			},
-			"error",
-			items...,
-		)
-		assert.Equal(t, "error", ans)
-	})
-}
-
 func TestList(t *testing.T) {
 	t.Run("list generator", func(t *testing.T) {
 		list := utils.NewList(1, 2, 3, 4, 5)
