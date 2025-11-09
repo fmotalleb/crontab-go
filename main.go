@@ -52,7 +52,7 @@ func main() {
 	initializeGlobalState()
 	l := global.Logger("cron")
 	l.Info("Booting up")
-	jobs.InitializeJobs()
+	go jobs.InitializeJobs()
 	if cmd.CFG.WebServerAddress != "" {
 		go webserver.
 			NewWebServer(

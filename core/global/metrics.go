@@ -2,77 +2,56 @@ package global
 
 import (
 	"context"
-	"fmt"
+	"maps"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/core/concurrency"
-	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
-func (c *Context) MetricCounter(
-	ctx context.Context,
-	name string,
-	help string,
-	labels prometheus.Labels,
-) *concurrency.LockedValue[float64] {
-	// ensure labels map exists so we can safely add const labels
-	if labels == nil {
-		labels = prometheus.Labels{}
-	}
-	// attach job info from context if present and build a unique tag
-	tag := name
-	if value, ok := ctx.Value(ctxutils.JobKey).(string); ok {
-		labels[string(ctxutils.JobKey)] = value
-		tag = fmt.Sprintf("%s,%s=%s", tag, ctxutils.JobKey, value)
-	}
+const namespace = "crontab_go"
 
-	// fast path: if already created, return it
-	c.mu.RLock()
-	if existing, ok := c.countersValue[tag]; ok {
-		c.mu.RUnlock()
-		return existing
-	}
-	c.mu.RUnlock()
+type Metrics = map[string]prometheus.CounterVec
 
-	// create new locked value and register Prometheus counter func
-	lv := concurrency.NewLockedValue[float64](0)
+var collectors = concurrency.NewLockedValue(make(Metrics, 0))
 
-	c.mu.Lock()
-	// double-check inside write lock
-	if existing, ok := c.countersValue[tag]; ok {
-		c.mu.Unlock()
-		return existing
-	}
-	c.countersValue[tag] = lv
-	// counter func should safely read the locked value under the context mutex
-	c.counters[tag] = promauto.NewCounterFunc(
-		prometheus.CounterOpts{
-			Name:        name,
-			ConstLabels: labels,
-			Help:        help,
-			Namespace:   "crontab_go",
-		},
-		func() float64 {
-			c.mu.RLock()
-			item, ok := c.countersValue[tag]
-			c.mu.RUnlock()
-			if !ok {
-				return 0.0
+func IncMetric(name string, help string, labels prometheus.Labels) {
+	collectors.Operate(
+		func(old Metrics) Metrics {
+			m := maps.Clone(old)
+			if vec, ok := m[name]; ok {
+				if olderVec, err := vec.GetMetricWith(labels); err != nil {
+					olderVec.Add(1)
+				} else {
+					c := vec.With(labels)
+					c.Add(1)
+				}
+				return m
 			}
-			return item.Get()
-		},
-	)
-	c.mu.Unlock()
 
-	return lv
+			keys := make([]string, 0, len(labels))
+			for key := range labels {
+				keys = append(keys, key)
+			}
+			vec := *promauto.NewCounterVec(
+				prometheus.CounterOpts{
+					Namespace: namespace,
+					Name:      name,
+					Help:      help,
+				},
+				keys,
+			)
+			counter := vec.With(labels)
+			counter.Add(1)
+			m[name] = vec
+			return m
+		})
 }
 
-func (c *Context) CountSignals(ctx context.Context, name string, signal abstraction.EventDispatcher, help string, labels prometheus.Labels) {
-	counter := c.MetricCounter(ctx, name, help, labels)
+func CountSignals(signal abstraction.EventDispatcher, name string, help string, labels prometheus.Labels) {
 	signal.AddListener(func(_ context.Context, _ abstraction.Event) {
-		counter.Set(counter.Get() + 1)
+		IncMetric(name, help, labels)
 	})
 }

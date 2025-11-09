@@ -41,7 +41,13 @@ func InitializeJobs() {
 			log.Panic("failed to validate job", zap.String("job", job.Name), zap.Error(err))
 		}
 		signal := signals.NewSync[abstraction.Event]()
-		global.CTX().CountSignals(c, "events", signal, "amount of events dispatched for this job", prometheus.Labels{})
+		global.CountSignals(signal,
+			"events",
+			"amount of events dispatched for this job",
+			prometheus.Labels{
+				"job": job.Name,
+			},
+		)
 		tasks, doneHooks, failHooks := initTasks(*job, logger.Named("Task"))
 		logger.Debug("Tasks initialized")
 
