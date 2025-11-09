@@ -13,7 +13,7 @@ import (
 
 const namespace = "crontab_go"
 
-type Metrics = map[string]prometheus.CounterVec
+type Metrics = map[string]*prometheus.CounterVec
 
 var collectors = concurrency.NewLockedValue(make(Metrics, 0))
 
@@ -35,7 +35,7 @@ func IncMetric(name string, help string, labels prometheus.Labels) {
 			for key := range labels {
 				keys = append(keys, key)
 			}
-			vec := *promauto.NewCounterVec(
+			vec := promauto.NewCounterVec(
 				prometheus.CounterOpts{
 					Namespace: namespace,
 					Name:      name,
