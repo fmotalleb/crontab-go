@@ -3,10 +3,12 @@ package event
 import (
 	"context"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types/events"
 	"github.com/docker/docker/client"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
@@ -16,16 +18,23 @@ import (
 	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
+const (
+	DockerEventsMetricName = "docker"
+	DockerEventsMetricHelp = "amount of events dispatched using docker"
+)
+
 func init() {
 	eg.Register(newDockerGenerator)
 }
 
 func newDockerGenerator(log *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.Docker != nil {
+
 		d := cfg.Docker
 		con := utils.FirstNonZeroForced(d.Connection,
 			"unix:///var/run/docker.sock",
 		)
+
 		e := NewDockerEvent(
 			con,
 			d.Name,
@@ -52,6 +61,7 @@ type DockerEvent struct {
 	errorPolicy      config.ErrorLimitPolicy
 	errorThrottle    time.Duration
 	log              *zap.Logger
+	metricLabels     prometheus.Labels
 }
 
 func NewDockerEvent(
@@ -65,6 +75,17 @@ func NewDockerEvent(
 	errorThrottle time.Duration,
 	logger *zap.Logger,
 ) abstraction.EventGenerator {
+	metricLabels := prometheus.Labels{
+		"connection":       connection,
+		"containerMatcher": containerMatcher,
+		"imageMatcher":     imageMatcher,
+		"actions":          strings.Join(actions, "||"),
+	}
+	global.RegisterCounter(
+		DockerEventsMetricName,
+		DockerEventsMetricHelp,
+		metricLabels,
+	)
 	return &DockerEvent{
 		connection:       connection,
 		containerMatcher: *regexp.MustCompile(containerMatcher),
@@ -75,6 +96,7 @@ func NewDockerEvent(
 		errorPolicy:      errorPolicy,
 		errorThrottle:    errorThrottle,
 		log:              logger,
+		metricLabels:     metricLabels,
 	}
 }
 
@@ -148,6 +170,11 @@ func (dockerEvent *DockerEvent) connectAndListen(ed abstraction.EventDispatcher)
 					"attributes": event.Actor.Attributes,
 				})
 				ed.Emit(ctx, meta)
+				global.IncMetric(
+					DockerEventsMetricName,
+					DockerEventsMetricHelp,
+					dockerEvent.metricLabels,
+				)
 			}
 			errCount.Set(0)
 		}

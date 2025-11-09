@@ -13,10 +13,17 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/global"
 	"github.com/fmotalleb/crontab-go/core/utils"
+)
+
+const (
+	LogEventsMetricName = "log_file"
+	LogEventsMetricHelp = "amount of events dispatched using log-file"
 )
 
 // TODO[epic=events] add watch method (probably after fs watcher is implemented)
@@ -65,6 +72,11 @@ func NewLogFile(filePath string, lineBreaker string, matcherStr string, checkCyc
 	if err != nil {
 		return nil, err
 	}
+	global.RegisterCounter(
+		LogEventsMetricName,
+		LogEventsMetricHelp,
+		prometheus.Labels{"file": filePath},
+	)
 	return &LogFile{
 		logger: logger.With(
 			zap.String("scheduler", "log_file"),
@@ -119,6 +131,11 @@ func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 					},
 				)
 				ed.Emit(ctx, event)
+				global.IncMetric(
+					LogEventsMetricName,
+					LogEventsMetricHelp,
+					prometheus.Labels{"file": lf.filePath},
+				)
 			}
 		}
 		time.Sleep(lf.checkCycle)

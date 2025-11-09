@@ -6,11 +6,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"github.com/fmotalleb/go-tools/concurrency"
+
 	"github.com/fmotalleb/crontab-go/abstraction"
-	"github.com/fmotalleb/crontab-go/core/concurrency"
 )
 
-const namespace = "crontab_go"
+const (
+	OKMetricName  = "done_tasks"
+	OKMetricHelp  = "Amount of done tasks (with ok status)"
+	ErrMetricName = "failed_tasks"
+	ErrMetricHelp = "Amount of failed tasks"
+
+	namespace = "crontab_go"
+)
 
 type Metrics = map[string]*prometheus.CounterVec
 
@@ -21,10 +29,9 @@ func IncMetric(name string, help string, labels prometheus.Labels) {
 		func(m Metrics) Metrics {
 			if vec, ok := m[name]; ok {
 				if olderVec, err := vec.GetMetricWith(labels); err == nil {
-					olderVec.Add(1)
+					olderVec.Inc()
 				} else {
-					c := vec.With(labels)
-					c.Add(1)
+					vec.With(labels).Inc()
 				}
 				return m
 			}
@@ -41,7 +48,35 @@ func IncMetric(name string, help string, labels prometheus.Labels) {
 				keys,
 			)
 			counter := vec.With(labels)
-			counter.Add(1)
+			counter.Inc()
+			m[name] = vec
+			return m
+		})
+}
+
+func RegisterCounter(name string, help string, labels prometheus.Labels) {
+	collectors.Operate(
+		func(m Metrics) Metrics {
+			if vec, ok := m[name]; ok {
+				if _, err := vec.GetMetricWith(labels); err != nil {
+					vec.With(labels).Add(0)
+				}
+				return m
+			}
+			keys := make([]string, 0, len(labels))
+			for key := range labels {
+				keys = append(keys, key)
+			}
+			vec := promauto.NewCounterVec(
+				prometheus.CounterOpts{
+					Namespace: namespace,
+					Name:      name,
+					Help:      help,
+				},
+				keys,
+			)
+			counter := vec.With(labels)
+			counter.Add(0)
 			m[name] = vec
 			return m
 		})

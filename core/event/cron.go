@@ -4,12 +4,18 @@ package event
 import (
 	"context"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/global"
+)
+
+const (
+	CronEventsMetricName = "cron"
+	CronEventsMetricHelp = "amount of events dispatched using cron"
 )
 
 func init() {
@@ -31,6 +37,11 @@ type Cron struct {
 }
 
 func NewCron(schedule string, c *cron.Cron, logger *zap.Logger) abstraction.EventGenerator {
+	global.RegisterCounter(
+		CronEventsMetricName,
+		CronEventsMetricHelp,
+		prometheus.Labels{"cron": schedule},
+	)
 	cron := &Cron{
 		cronSchedule: schedule,
 		cron:         c,
@@ -67,6 +78,11 @@ func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 	defer cancel()
 	for e := range notifyChan {
 		ed.Emit(ctx, e)
+		global.IncMetric(
+			CronEventsMetricName,
+			CronEventsMetricHelp,
+			prometheus.Labels{"cron": c.cronSchedule},
+		)
 	}
 }
 

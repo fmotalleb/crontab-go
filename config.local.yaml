@@ -10,7 +10,7 @@ jobs:
         env:
           COLE: test
         on-done:
-          - command: echo {{ .Vars.name }}
+          - command: echo {{ .Vars.name }}; sleep 1sec
         # connections:
         #   - image: "library/alpine"
 
