@@ -81,3 +81,5 @@ This project was possible thanks to
   - Cron backend!
 - [GoDotenv](https://github.com/joho/godotenv)
   - A Go (golang) port of the Ruby dotenv project (which loads env vars from a .env file).
+- [Signals](github.com/maniartech/signals)
+  - High-Performance, Production-Ready Event System for Go.
