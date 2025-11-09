@@ -76,13 +76,18 @@ func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 	}
 	ctx, cancel := context.WithCancel(global.CTX().Context)
 	defer cancel()
-	for e := range notifyChan {
-		ed.Emit(ctx, e)
-		global.IncMetric(
-			CronEventsMetricName,
-			CronEventsMetricHelp,
-			prometheus.Labels{"cron": c.cronSchedule},
-		)
+	for {
+		select {
+		case e := <-notifyChan:
+			ed.Emit(ctx, e)
+			global.IncMetric(
+				CronEventsMetricName,
+				CronEventsMetricHelp,
+				prometheus.Labels{"cron": c.cronSchedule},
+			)
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 

@@ -113,6 +113,11 @@ func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 		return
 	}
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		data, err := reader.ReadString(byte(0))
 		if err != nil && err != io.EOF {
 			lf.logger.Error("error reading log file", zap.Error(err))

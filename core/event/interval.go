@@ -61,19 +61,24 @@ func (c *Interval) BuildTickChannel(ed abstraction.EventDispatcher) {
 	ctx, cancel := context.WithCancel(global.CTX())
 	intervalStr := c.duration.String()
 	defer cancel()
-	for i := range c.ticker.C {
-		event := NewMetaData(
-			"interval",
-			map[string]any{
-				"interval": intervalStr,
-				"time":     i.Format(time.RFC3339),
-			},
-		)
-		ed.Emit(ctx, event)
-		global.IncMetric(
-			IntervalEventsMetricName,
-			IntervalEventsMetricHelp,
-			prometheus.Labels{"interval": intervalStr},
-		)
+	for {
+		select {
+		case i := <-c.ticker.C:
+			event := NewMetaData(
+				"interval",
+				map[string]any{
+					"interval": intervalStr,
+					"time":     i.Format(time.RFC3339),
+				},
+			)
+			ed.Emit(ctx, event)
+			global.IncMetric(
+				IntervalEventsMetricName,
+				IntervalEventsMetricHelp,
+				prometheus.Labels{"interval": intervalStr},
+			)
+		case <-ctx.Done():
+			return
+		}
 	}
 }

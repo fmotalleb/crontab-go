@@ -178,6 +178,8 @@ func (dockerEvent *DockerEvent) connectAndListen(ed abstraction.EventDispatcher)
 				)
 			}
 			errCount.Set(0)
+		case <-ctx.Done():
+			return true
 		}
 	}
 }
