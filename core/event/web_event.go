@@ -58,7 +58,7 @@ func (w *WebEventListener) BuildTickChannel(ed abstraction.EventDispatcher) {
 			global.IncMetric(
 				WebEventsMetricName,
 				WebEventsMetricHelp,
-				prometheus.Labels{"file": w.event},
+				prometheus.Labels{"event_name": w.event},
 			)
 			ed.Emit(ctx, event)
 		},
