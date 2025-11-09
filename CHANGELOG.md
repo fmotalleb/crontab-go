@@ -79,3 +79,16 @@ This file summarizes notable changes for each released tag. Trivial noise (merge
 - Feature: per-task variables that can be used in hooks.
 - Chore: switch logger to zap logger.
 - Fix: remove redundant println in cron registration.
+
+## v0.10.1 (2025-11-09)
+
+- Chore: switch webserver to echo from gin.
+
+## v0.11.0 (2025-11-09)
+
+**This is a major upgrade and will be the backbone of v1.0.0 release.**
+
+- Refactor: re-wrote internal event system from simple channel mechanism to signaling method.
+- Refactor: metrics re-wrote.
+- Refactor: log-file event system re-wrote.
+- Refactor/Cleanup: removed useless functions and methods.
