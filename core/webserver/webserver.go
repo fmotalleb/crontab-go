@@ -7,7 +7,8 @@ import (
 	"net/http"
 
 	"github.com/fmotalleb/go-tools/log"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
@@ -46,26 +47,53 @@ func NewWebServer(ctx context.Context,
 }
 
 func (s *WebServer) Serve() {
-	engine := gin.New()
-	auth := func(*gin.Context) {}
+	engine := echo.New()
+	auth := func(next echo.HandlerFunc) echo.HandlerFunc {
+		return next
+	}
 	if s.AuthConfig != nil && s.AuthConfig.Username != "" && s.AuthConfig.Password != "" {
-		auth = gin.BasicAuth(gin.Accounts{s.AuthConfig.Username: s.AuthConfig.Password})
+		auth = middleware.BasicAuth(func(username, password string, _ echo.Context) (bool, error) {
+			if username == s.AuthConfig.Username && password == s.AuthConfig.Password {
+				return true, nil
+			}
+			return false, nil
+		})
 	} else {
 		s.log.Warn("received no value on username or password, ignoring any authentication, if you intended to use no authentication ignore this message")
 	}
-	// log := gin.LoggerWithConfig(gin.LoggerConfig{
-	// 	Formatter: gin.format,
-	// })
+
 	engine.Use(
 		auth,
-		// log,
-		gin.Recovery(),
+		middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+			LogURI:      true,
+			LogStatus:   true,
+			LogError:    true,
+			HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
+			LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+				if v.Error == nil {
+					s.log.Debug(
+						"request served",
+						zap.String("URI", v.URI),
+						zap.Int("status", v.Status),
+					)
+				} else {
+					s.log.Warn(
+						"request failed",
+						zap.String("URI", v.URI),
+						zap.Int("status", v.Status),
+						zap.Error(v.Error),
+					)
+				}
+				return nil
+			},
+		}),
+		middleware.Recover(),
 	)
 
 	engine.GET(
 		"/foo",
-		func(c *gin.Context) {
-			c.String(200, "bar")
+		func(c echo.Context) error {
+			return c.String(200, "bar")
 		},
 	)
 
@@ -75,16 +103,17 @@ func (s *WebServer) Serve() {
 		ed.Endpoint,
 	)
 	if s.serveMetrics {
-		engine.GET("/metrics", func(ctx *gin.Context) {
-			promhttp.Handler().ServeHTTP(ctx.Writer, ctx.Request)
+		engine.GET("/metrics", func(c echo.Context) error {
+			promhttp.Handler().ServeHTTP(c.Response().Writer, c.Request())
+			return nil
 		})
 	} else {
-		engine.GET("/metrics", func(ctx *gin.Context) {
-			ctx.String(http.StatusNotFound, "Metrics are disabled, please enable metrics using `WEBSERVER_METRICS=true`")
+		engine.GET("/metrics", func(c echo.Context) error {
+			return c.String(http.StatusNotFound, "Metrics are disabled, please enable metrics using `WEBSERVER_METRICS=true`")
 		})
 	}
 
-	err := engine.Run(fmt.Sprintf("%s:%d", s.address, s.port))
+	err := engine.Start(fmt.Sprintf("%s:%d", s.address, s.port))
 	helpers.FatalOnErr(
 		s.log,
 		func() error {

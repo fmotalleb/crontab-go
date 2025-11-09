@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/fmotalleb/crontab-go/core/global"
@@ -17,21 +17,20 @@ func NewEventDispatchEndpoint() *EventDispatchEndpoint {
 	return &EventDispatchEndpoint{}
 }
 
-func (ed *EventDispatchEndpoint) Endpoint(c *gin.Context) {
+func (ed *EventDispatchEndpoint) Endpoint(c echo.Context) error {
 	event := c.Param("event")
 
 	metaData := make(map[string]any)
-	for key, values := range c.Request.URL.Query() {
+	for key, values := range c.Request().URL.Query() {
 		metaData[key] = values
 	}
 
 	listeners := global.CTX().EventListeners()[event]
 	if len(listeners) == 0 {
-		c.String(http.StatusNotFound, fmt.Sprintf("event: '%s' not found", event))
-		return
+		return c.String(http.StatusNotFound, fmt.Sprintf("event: '%s' not found", event))
 	}
 	global.CTX().MetricCounter(
-		c,
+		c.Request().Context(),
 		"webserver_events",
 		"amount of events dispatched using webserver",
 		prometheus.Labels{"event_name": event},
@@ -41,7 +40,7 @@ func (ed *EventDispatchEndpoint) Endpoint(c *gin.Context) {
 		},
 	)
 	listenerCount := len(listeners)
-	global.CTX().MetricCounter(c, "webserver_event_listeners_invoked", "amount of listeners invoked by `event_name` event", prometheus.Labels{"event_name": event}).Operate(
+	global.CTX().MetricCounter(c.Request().Context(), "webserver_event_listeners_invoked", "amount of listeners invoked by `event_name` event", prometheus.Labels{"event_name": event}).Operate(
 		func(f float64) float64 {
 			return f + float64(listenerCount)
 		},
@@ -49,5 +48,5 @@ func (ed *EventDispatchEndpoint) Endpoint(c *gin.Context) {
 	for _, listener := range listeners {
 		go listener(metaData)
 	}
-	c.String(http.StatusOK, fmt.Sprintf("event: '%s' emitted, %d listeners where found", event, listenerCount))
+	return c.String(http.StatusOK, fmt.Sprintf("event: '%s' emitted, %d listeners where found", event, listenerCount))
 }

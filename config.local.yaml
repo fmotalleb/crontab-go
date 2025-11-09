@@ -3,7 +3,7 @@
 jobs:
   - name: echo
     tasks:
-      - command: echo {{ .Vars.name }}; sleep 5sec
+      - command: echo {{ .Vars.name }}; sleep 5
         vars:
           name: '{{ now | date "2006-01-02_15-04-05" }}'
         env:
