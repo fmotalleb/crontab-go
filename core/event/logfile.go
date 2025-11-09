@@ -2,6 +2,7 @@ package event
 
 import (
 	"bufio"
+	"cmp"
 	"context"
 	"errors"
 	"io"
@@ -18,7 +19,6 @@ import (
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/global"
-	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
 const (
@@ -62,9 +62,9 @@ type LogFile struct {
 
 // NewLogFile creates a new LogFile with the given parameters.
 func NewLogFile(filePath string, lineBreaker string, matcherStr string, checkCycle time.Duration, logger *zap.Logger) (*LogFile, error) {
-	lineBreaker = utils.FirstNonZeroForced(lineBreaker, "\n")
-	matcherStr = utils.FirstNonZeroForced(matcherStr, ".")
-	checkCycle = utils.FirstNonZeroForced(checkCycle, time.Second)
+	lineBreaker = cmp.Or(lineBreaker, "\n")
+	matcherStr = cmp.Or(matcherStr, ".")
+	checkCycle = cmp.Or(checkCycle, time.Second)
 
 	matcher, err := regexp.Compile(
 		matcherStr,

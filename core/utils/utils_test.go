@@ -1,7 +1,6 @@
 package utils_test
 
 import (
-	"sort"
 	"strconv"
 	"testing"
 
@@ -32,52 +31,6 @@ func TestSelector(t *testing.T) {
 			items...,
 		)
 		assert.Equal(t, "error", ans)
-	})
-}
-
-func TestNonZeroSelector(t *testing.T) {
-	t.Run("MayFirstNonZero", func(t *testing.T) {
-		items := []int{0, 1, 2, 3, 4, 5}
-		ans := utils.FirstNonZeroForced(items...)
-		assert.Equal(t, 1, ans)
-	})
-	t.Run("MayFirstNon", func(t *testing.T) {
-		items := []int{0, 1, 2, 3, 4, 5}
-		ans, err := utils.FirstNonZero(items...)
-		assert.NoError(t, err)
-		assert.Equal(t, 1, ans)
-	})
-	t.Run("MayFirstNon", func(t *testing.T) {
-		items := []int{0, 0, 0, 0, 0}
-		ans, err := utils.FirstNonZero(items...)
-		assert.Error(t, err)
-		assert.Equal(t, 0, ans)
-	})
-}
-
-func TestZipChannel(t *testing.T) {
-	t.Run("zip channel test", func(t *testing.T) {
-		ch1 := make(chan int)
-		ch2 := make(chan int)
-		go func() {
-			for i := 0; i < 5; i++ {
-				ch1 <- i
-			}
-			close(ch1)
-		}()
-		go func() {
-			for i := 0; i < 5; i++ {
-				ch2 <- i
-			}
-			close(ch2)
-		}()
-		zipped := utils.ZipChannels(ch1, ch2)
-		ans := make([]int, 0)
-		for val := range zipped {
-			ans = append(ans, val)
-		}
-		sort.Ints(ans)
-		assert.Equal(t, []int{0, 0, 1, 1, 2, 2, 3, 3, 4, 4}, ans)
 	})
 }
 

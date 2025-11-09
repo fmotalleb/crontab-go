@@ -198,7 +198,7 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 		func() error {
 			return resp.Close()
 		},
-		"cannot close the container's logs: %s",
+		"cannot close the container's logs",
 	)
 
 	writer := bytes.NewBuffer([]byte{})

@@ -1,6 +1,7 @@
 package event
 
 import (
+	"cmp"
 	"context"
 	"regexp"
 	"strings"
@@ -11,9 +12,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
+	"github.com/fmotalleb/go-tools/concurrency"
+
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
-	"github.com/fmotalleb/crontab-go/core/concurrency"
 	"github.com/fmotalleb/crontab-go/core/global"
 	"github.com/fmotalleb/crontab-go/core/utils"
 )
@@ -29,9 +31,8 @@ func init() {
 
 func newDockerGenerator(log *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.Docker != nil {
-
 		d := cfg.Docker
-		con := utils.FirstNonZeroForced(d.Connection,
+		con := cmp.Or(d.Connection,
 			"unix:///var/run/docker.sock",
 		)
 
@@ -41,9 +42,9 @@ func newDockerGenerator(log *zap.Logger, cfg *config.JobEvent) (abstraction.Even
 			d.Image,
 			d.Actions,
 			d.Labels,
-			utils.FirstNonZeroForced(d.ErrorLimit, 1),
-			utils.FirstNonZeroForced(d.ErrorLimitPolicy, config.ErrorPolReconnect),
-			utils.FirstNonZeroForced(d.ErrorThrottle, time.Second*5),
+			cmp.Or(d.ErrorLimit, 1),
+			cmp.Or(d.ErrorLimitPolicy, config.ErrorPolReconnect),
+			cmp.Or(d.ErrorThrottle, time.Second*5),
 			log,
 		)
 		return e, true

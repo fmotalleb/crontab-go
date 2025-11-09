@@ -10,10 +10,8 @@ import (
 	"sync"
 
 	"github.com/fmotalleb/go-tools/log"
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
-	"github.com/fmotalleb/crontab-go/core/concurrency"
 	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
@@ -31,9 +29,7 @@ type (
 	EventListenerMap = map[string][]func(map[string]any)
 	Context          struct {
 		context.Context
-		mu            *sync.RWMutex
-		countersValue map[string]*concurrency.LockedValue[float64]
-		counters      map[string]prometheus.CounterFunc
+		mu *sync.RWMutex
 	}
 )
 
@@ -50,10 +46,8 @@ func newGlobalContext() *Context {
 		EventListenerMap{},
 	)
 	return &Context{
-		Context:       ctx,
-		mu:            new(sync.RWMutex),
-		countersValue: make(map[string]*concurrency.LockedValue[float64]),
-		counters:      make(map[string]prometheus.CounterFunc),
+		Context: ctx,
+		mu:      new(sync.RWMutex),
 	}
 }
 
