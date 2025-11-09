@@ -2,12 +2,20 @@
 package event
 
 import (
+	"context"
+
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/global"
+)
+
+const (
+	CronEventsMetricName = "cron"
+	CronEventsMetricHelp = "amount of events dispatched using cron"
 )
 
 func init() {
@@ -29,6 +37,11 @@ type Cron struct {
 }
 
 func NewCron(schedule string, c *cron.Cron, logger *zap.Logger) abstraction.EventGenerator {
+	global.RegisterCounter(
+		CronEventsMetricName,
+		CronEventsMetricHelp,
+		prometheus.Labels{"cron": schedule},
+	)
 	cron := &Cron{
 		cronSchedule: schedule,
 		cron:         c,
@@ -42,7 +55,7 @@ func NewCron(schedule string, c *cron.Cron, logger *zap.Logger) abstraction.Even
 }
 
 // BuildTickChannel implements abstraction.Scheduler.
-func (c *Cron) BuildTickChannel() abstraction.EventChannel {
+func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 	if c.entry != nil {
 		c.logger.Fatal("already built the ticker channel")
 	}
@@ -61,7 +74,21 @@ func (c *Cron) BuildTickChannel() abstraction.EventChannel {
 		)
 		c.entry = &entry
 	}
-	return notifyChan
+	ctx, cancel := context.WithCancel(global.CTX().Context)
+	defer cancel()
+	for {
+		select {
+		case e := <-notifyChan:
+			ed.Emit(ctx, e)
+			global.IncMetric(
+				CronEventsMetricName,
+				CronEventsMetricHelp,
+				prometheus.Labels{"cron": c.cronSchedule},
+			)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 type cronJob struct {

@@ -11,22 +11,21 @@ import (
 )
 
 func taskHandler(
-	c context.Context,
 	logger *zap.Logger,
-	signal abstraction.EventChannel,
+	ed abstraction.EventDispatcher,
 	tasks []abstraction.Executable,
 	doneHooks []abstraction.Executable,
 	failHooks []abstraction.Executable,
 	lock sync.Locker,
 ) {
 	logger.Debug("Spawning task handler")
-	for event := range signal {
+	ed.AddListener(func(ctx context.Context, e abstraction.Event) {
 		logger.Debug("Signal Received")
 		for _, task := range tasks {
-			c = context.WithValue(c, ctxutils.EventData, event)
-			go executeTask(c, task, doneHooks, failHooks, lock)
+			ctxInternal := context.WithValue(ctx, ctxutils.EventData, e)
+			go executeTask(ctxInternal, task, doneHooks, failHooks, lock)
 		}
-	}
+	})
 }
 
 func executeTask(

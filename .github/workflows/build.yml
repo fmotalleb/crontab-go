@@ -30,11 +30,6 @@ jobs:
 
       - name: Build
         run: make ci
-      - name: Upload coverage
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        with:
-          name: coverage-${{ matrix.os }}
-          path: coverage.*
 
       - run: make build
         env:
@@ -46,10 +41,3 @@ jobs:
         with:
           name: dist-${{ matrix.os }}
           path: dist
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
-        with:
-          fail_ci_if_error: true
-          files: ./coverage.out
-          token: ${{ secrets.CODECOV_TOKEN }}

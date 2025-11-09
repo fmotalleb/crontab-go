@@ -1,8 +1,7 @@
 package jobs
 
 import (
-	"context"
-
+	"github.com/maniartech/signals"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/concurrency"
 	"github.com/fmotalleb/crontab-go/core/global"
-	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 func InitializeJobs() {
@@ -25,8 +23,6 @@ func InitializeJobs() {
 		if job.Concurrency == 0 {
 			job.Concurrency = 1
 		}
-		c := global.CTX().Context
-		c = context.WithValue(c, ctxutils.JobKey, job.Name)
 
 		lock, err := concurrency.NewConcurrentPool(job.Concurrency)
 		if err != nil {
@@ -39,23 +35,28 @@ func InitializeJobs() {
 		if err := job.Validate(logger.Named("Validator")); err != nil {
 			log.Panic("failed to validate job", zap.String("job", job.Name), zap.Error(err))
 		}
-
-		signal := buildSignal(*job, logger.Named("SignalGen"))
-		signal = global.CTX().CountSignals(c, "events", signal, "amount of events dispatched for this job", prometheus.Labels{})
+		signal := signals.NewSync[abstraction.Event]()
+		global.CountSignals(signal,
+			"events",
+			"amount of events dispatched for this job",
+			prometheus.Labels{
+				"job": job.Name,
+			},
+		)
 		tasks, doneHooks, failHooks := initTasks(*job, logger.Named("Task"))
 		logger.Debug("Tasks initialized")
 
-		go taskHandler(c, logger.Named("TaskRunner"), signal, tasks, doneHooks, failHooks, lock)
+		taskHandler(logger.Named("TaskRunner"), signal, tasks, doneHooks, failHooks, lock)
+		buildSignal(signal, *job, logger.Named("SignalGen"))
+
 		logger.Debug("EventLoop initialized")
 	}
 	log.Info("Jobs Are Ready")
 }
 
-func buildSignal(job config.JobConfig, logger *zap.Logger) abstraction.EventChannel {
+func buildSignal(ed abstraction.EventDispatcher, job config.JobConfig, logger *zap.Logger) {
 	events := initEvents(job, logger)
 	logger.Debug("Events initialized")
 
-	signal := initEventSignal(events, logger)
-
-	return signal
+	initEventSignal(ed, events, logger)
 }

@@ -10,18 +10,14 @@ import (
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/event"
 	"github.com/fmotalleb/crontab-go/core/task"
-	"github.com/fmotalleb/crontab-go/core/utils"
 	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
-func initEventSignal(events []abstraction.EventGenerator, logger *zap.Logger) abstraction.EventChannel {
-	signals := make([]abstraction.EventChannel, 0, len(events))
+func initEventSignal(ed abstraction.EventDispatcher, events []abstraction.EventGenerator, logger *zap.Logger) {
 	for _, ev := range events {
-		signals = append(signals, ev.BuildTickChannel())
+		go ev.BuildTickChannel(ed)
 	}
-	logger.Debug("Signals Built")
-	signal := utils.ZipChannels(signals...)
-	return signal
+	logger.Debug("signals initialized")
 }
 
 func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executable, []abstraction.Executable, []abstraction.Executable) {

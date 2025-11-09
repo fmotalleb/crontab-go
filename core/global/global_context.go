@@ -10,10 +10,8 @@ import (
 	"sync"
 
 	"github.com/fmotalleb/go-tools/log"
-	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
-	"github.com/fmotalleb/crontab-go/core/concurrency"
 	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
@@ -31,9 +29,7 @@ type (
 	EventListenerMap = map[string][]func(map[string]any)
 	Context          struct {
 		context.Context
-		lock          *sync.RWMutex
-		countersValue map[string]*concurrency.LockedValue[float64]
-		counters      map[string]prometheus.CounterFunc
+		mu *sync.RWMutex
 	}
 )
 
@@ -50,23 +46,21 @@ func newGlobalContext() *Context {
 		EventListenerMap{},
 	)
 	return &Context{
-		Context:       ctx,
-		lock:          new(sync.RWMutex),
-		countersValue: make(map[string]*concurrency.LockedValue[float64]),
-		counters:      make(map[string]prometheus.CounterFunc),
+		Context: ctx,
+		mu:      new(sync.RWMutex),
 	}
 }
 
 func (c *Context) EventListeners() EventListenerMap {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	listeners := c.Value(ctxutils.EventListeners)
 	return listeners.(EventListenerMap)
 }
 
 func (c *Context) AddEventListener(event string, listener func(map[string]any)) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	listeners := c.Value(ctxutils.EventListeners).(EventListenerMap)
 	listeners[event] = append(listeners[event], listener)
 	c.Context = context.WithValue(c.Context, ctxutils.EventListeners, listeners)
@@ -79,8 +73,8 @@ func getTypename[T any](item T) string {
 func Put[T any](item T) {
 	name := getTypename(item)
 	ctx := c()
-	ctx.lock.Lock()
-	defer ctx.lock.Unlock()
+	ctx.mu.Lock()
+	defer ctx.mu.Unlock()
 	ctx.Context = context.WithValue(ctx.Context, ctxKey("typed", name), item)
 }
 

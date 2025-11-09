@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/core/webserver/endpoint"
-	"github.com/fmotalleb/crontab-go/helpers"
 )
 
 type AuthConfig struct {
@@ -69,7 +68,7 @@ func (s *WebServer) Serve() {
 			LogStatus:   true,
 			LogError:    true,
 			HandleError: true, // forwards error to the global error handler, so it can decide appropriate status code
-			LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			LogValuesFunc: func(_ echo.Context, v middleware.RequestLoggerValues) error {
 				if v.Error == nil {
 					s.log.Debug(
 						"request served",
@@ -112,13 +111,7 @@ func (s *WebServer) Serve() {
 			return c.String(http.StatusNotFound, "Metrics are disabled, please enable metrics using `WEBSERVER_METRICS=true`")
 		})
 	}
-
-	err := engine.Start(fmt.Sprintf("%s:%d", s.address, s.port))
-	helpers.FatalOnErr(
-		s.log,
-		func() error {
-			return err
-		},
-		"Failed to start webserver: %s",
-	)
+	if err := engine.Start(fmt.Sprintf("%s:%d", s.address, s.port)); err != nil {
+		s.log.Fatal("failed to start webserver", zap.Error(err))
+	}
 }

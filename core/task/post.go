@@ -113,7 +113,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 			defer helpers.WarnOnErrIgnored(
 				log,
 				res.Body.Close,
-				"cannot close response body: %s",
+				"cannot close response body",
 			)
 		}
 		log = log.With(zap.Int("status", res.StatusCode))

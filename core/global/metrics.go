@@ -2,62 +2,88 @@ package global
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"github.com/fmotalleb/go-tools/concurrency"
+
 	"github.com/fmotalleb/crontab-go/abstraction"
-	"github.com/fmotalleb/crontab-go/core/concurrency"
-	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
-func (c *Context) MetricCounter(
-	ctx context.Context,
-	name string,
-	help string,
-	labels prometheus.Labels,
-) *concurrency.LockedValue[float64] {
-	tag := name
-	for _, label := range []ctxutils.ContextKey{ctxutils.JobKey} {
-		if value, ok := ctx.Value(label).(string); ok {
-			labels[string(label)] = value
-			tag = fmt.Sprintf("%s,%s=%s", tag, label, value)
-		}
-	}
-	if c, ok := c.countersValue[tag]; ok {
-		return c
-	}
-	c.countersValue[tag] = concurrency.NewLockedValue[float64](0)
-	c.counters[tag] = promauto.NewCounterFunc(
-		prometheus.CounterOpts{
-			Name:        name,
-			ConstLabels: labels,
-			Help:        help,
-			Namespace:   "crontab_go",
-		},
-		func() float64 {
-			item, ok := c.countersValue[tag]
-			if !ok {
-				return 0.0
+const (
+	OKMetricName  = "done_tasks"
+	OKMetricHelp  = "Amount of done tasks (with ok status)"
+	ErrMetricName = "failed_tasks"
+	ErrMetricHelp = "Amount of failed tasks"
+
+	namespace = "crontab_go"
+)
+
+type Metrics = map[string]*prometheus.CounterVec
+
+var collectors = concurrency.NewLockedValue(make(Metrics, 0))
+
+func IncMetric(name string, help string, labels prometheus.Labels) {
+	collectors.Operate(
+		func(m Metrics) Metrics {
+			if vec, ok := m[name]; ok {
+				if olderVec, err := vec.GetMetricWith(labels); err == nil {
+					olderVec.Inc()
+				} else {
+					vec.With(labels).Inc()
+				}
+				return m
 			}
-			ans := item.Get()
-			// a counter should not reset after it's collected by Prometheus.
-			// item.Set(0)
-			return ans
-		},
-	)
-	return c.MetricCounter(ctx, name, help, labels)
+			keys := make([]string, 0, len(labels))
+			for key := range labels {
+				keys = append(keys, key)
+			}
+			vec := promauto.NewCounterVec(
+				prometheus.CounterOpts{
+					Namespace: namespace,
+					Name:      name,
+					Help:      help,
+				},
+				keys,
+			)
+			counter := vec.With(labels)
+			counter.Inc()
+			m[name] = vec
+			return m
+		})
 }
 
-func (c *Context) CountSignals(ctx context.Context, name string, signal abstraction.EventChannel, help string, labels prometheus.Labels) abstraction.EventChannel {
-	counter := c.MetricCounter(ctx, name, help, labels)
-	out := make(abstraction.EventEmitChannel)
-	go func() {
-		for c := range signal {
-			counter.Set(counter.Get() + 1)
-			out <- c
-		}
-	}()
-	return out
+func RegisterCounter(name string, help string, labels prometheus.Labels) {
+	collectors.Operate(
+		func(m Metrics) Metrics {
+			if vec, ok := m[name]; ok {
+				if _, err := vec.GetMetricWith(labels); err != nil {
+					vec.With(labels).Add(0)
+				}
+				return m
+			}
+			keys := make([]string, 0, len(labels))
+			for key := range labels {
+				keys = append(keys, key)
+			}
+			vec := promauto.NewCounterVec(
+				prometheus.CounterOpts{
+					Namespace: namespace,
+					Name:      name,
+					Help:      help,
+				},
+				keys,
+			)
+			counter := vec.With(labels)
+			counter.Add(0)
+			m[name] = vec
+			return m
+		})
+}
+
+func CountSignals(signal abstraction.EventDispatcher, name string, help string, labels prometheus.Labels) {
+	signal.AddListener(func(_ context.Context, _ abstraction.Event) {
+		IncMetric(name, help, labels)
+	})
 }

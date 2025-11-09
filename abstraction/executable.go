@@ -11,6 +11,7 @@ import (
 
 // Executable is an object that can be executed using a execute method and stopped using cancel method.
 type Executable interface {
+	GetMeta() map[string]string
 	Execute(context.Context) error
 	SetMetaName(string)
 	SetDoneHooks(context.Context, []Executable)

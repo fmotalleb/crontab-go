@@ -100,7 +100,7 @@ func (c *Command) Execute(ctx context.Context) (e error) {
 			helpers.WarnOnErrIgnored(
 				l,
 				connection.Disconnect,
-				"Cannot disconnect the command's connection: %s",
+				"Cannot disconnect the command's connection",
 			)
 			continue
 		}

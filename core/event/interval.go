@@ -1,12 +1,21 @@
 package event
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/zap"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/global"
+)
+
+const (
+	IntervalEventsMetricName = "interval"
+	IntervalEventsMetricHelp = "amount of events dispatched using interval"
 )
 
 func init() {
@@ -27,6 +36,11 @@ type Interval struct {
 }
 
 func NewInterval(schedule time.Duration, logger *zap.Logger) abstraction.EventGenerator {
+	global.RegisterCounter(
+		IntervalEventsMetricName,
+		IntervalEventsMetricHelp,
+		prometheus.Labels{"interval": schedule.String()},
+	)
 	return &Interval{
 		duration: schedule,
 		logger: logger.
@@ -38,25 +52,33 @@ func NewInterval(schedule time.Duration, logger *zap.Logger) abstraction.EventGe
 }
 
 // BuildTickChannel implements abstraction.Scheduler.
-func (c *Interval) BuildTickChannel() abstraction.EventChannel {
+func (c *Interval) BuildTickChannel(ed abstraction.EventDispatcher) {
 	if c.ticker != nil {
 		c.logger.Fatal("already built the ticker channel")
 	}
-	notifyChan := make(abstraction.EventEmitChannel)
-	c.ticker = time.NewTicker(c.duration)
-	go func() {
-		// c.notifyChan <- false
 
-		for i := range c.ticker.C {
-			notifyChan <- NewMetaData(
+	c.ticker = time.NewTicker(c.duration)
+	ctx, cancel := context.WithCancel(global.CTX())
+	intervalStr := c.duration.String()
+	defer cancel()
+	for {
+		select {
+		case i := <-c.ticker.C:
+			event := NewMetaData(
 				"interval",
 				map[string]any{
-					"interval": c.duration.String(),
+					"interval": intervalStr,
 					"time":     i.Format(time.RFC3339),
 				},
 			)
+			ed.Emit(ctx, event)
+			global.IncMetric(
+				IntervalEventsMetricName,
+				IntervalEventsMetricHelp,
+				prometheus.Labels{"interval": intervalStr},
+			)
+		case <-ctx.Done():
+			return
 		}
-	}()
-
-	return notifyChan
+	}
 }
