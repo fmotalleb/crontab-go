@@ -2,6 +2,7 @@
 
 jobs:
   - name: echo
+    concurrency: 3
     tasks:
       - command: echo {{ .Vars.name }}; sleep 5sec
         vars:

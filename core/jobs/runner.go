@@ -1,8 +1,6 @@
 package jobs
 
 import (
-	"context"
-
 	"github.com/maniartech/signals"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -12,7 +10,6 @@ import (
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/concurrency"
 	"github.com/fmotalleb/crontab-go/core/global"
-	"github.com/fmotalleb/crontab-go/ctxutils"
 )
 
 func InitializeJobs() {
@@ -26,8 +23,6 @@ func InitializeJobs() {
 		if job.Concurrency == 0 {
 			job.Concurrency = 1
 		}
-		c := global.CTX().Context
-		c = context.WithValue(c, ctxutils.JobKey, job.Name)
 
 		lock, err := concurrency.NewConcurrentPool(job.Concurrency)
 		if err != nil {
