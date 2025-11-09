@@ -18,17 +18,36 @@ func (c *Context) MetricCounter(
 	help string,
 	labels prometheus.Labels,
 ) *concurrency.LockedValue[float64] {
+	// ensure labels map exists so we can safely add const labels
+	if labels == nil {
+		labels = prometheus.Labels{}
+	}
+	// attach job info from context if present and build a unique tag
 	tag := name
-	for _, label := range []ctxutils.ContextKey{ctxutils.JobKey} {
-		if value, ok := ctx.Value(label).(string); ok {
-			labels[string(label)] = value
-			tag = fmt.Sprintf("%s,%s=%s", tag, label, value)
-		}
+	if value, ok := ctx.Value(ctxutils.JobKey).(string); ok {
+		labels[string(ctxutils.JobKey)] = value
+		tag = fmt.Sprintf("%s,%s=%s", tag, ctxutils.JobKey, value)
 	}
-	if c, ok := c.countersValue[tag]; ok {
-		return c
+
+	// fast path: if already created, return it
+	c.mu.RLock()
+	if existing, ok := c.countersValue[tag]; ok {
+		c.mu.RUnlock()
+		return existing
 	}
-	c.countersValue[tag] = concurrency.NewLockedValue[float64](0)
+	c.mu.RUnlock()
+
+	// create new locked value and register Prometheus counter func
+	lv := concurrency.NewLockedValue[float64](0)
+
+	c.mu.Lock()
+	// double-check inside write lock
+	if existing, ok := c.countersValue[tag]; ok {
+		c.mu.Unlock()
+		return existing
+	}
+	c.countersValue[tag] = lv
+	// counter func should safely read the locked value under the context mutex
 	c.counters[tag] = promauto.NewCounterFunc(
 		prometheus.CounterOpts{
 			Name:        name,
@@ -37,17 +56,18 @@ func (c *Context) MetricCounter(
 			Namespace:   "crontab_go",
 		},
 		func() float64 {
+			c.mu.RLock()
 			item, ok := c.countersValue[tag]
+			c.mu.RUnlock()
 			if !ok {
 				return 0.0
 			}
-			ans := item.Get()
-			// a counter should not reset after it's collected by Prometheus.
-			// item.Set(0)
-			return ans
+			return item.Get()
 		},
 	)
-	return c.MetricCounter(ctx, name, help, labels)
+	c.mu.Unlock()
+
+	return lv
 }
 
 func (c *Context) CountSignals(ctx context.Context, name string, signal abstraction.EventDispatcher, help string, labels prometheus.Labels) {
