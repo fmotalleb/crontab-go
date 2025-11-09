@@ -1,12 +1,14 @@
 package event
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/global"
 )
 
 func init() {
@@ -38,25 +40,22 @@ func NewInterval(schedule time.Duration, logger *zap.Logger) abstraction.EventGe
 }
 
 // BuildTickChannel implements abstraction.Scheduler.
-func (c *Interval) BuildTickChannel() abstraction.EventChannel {
+func (c *Interval) BuildTickChannel(ed abstraction.EventDispatcher) {
 	if c.ticker != nil {
 		c.logger.Fatal("already built the ticker channel")
 	}
-	notifyChan := make(abstraction.EventEmitChannel)
+
 	c.ticker = time.NewTicker(c.duration)
-	go func() {
-		// c.notifyChan <- false
-
-		for i := range c.ticker.C {
-			notifyChan <- NewMetaData(
-				"interval",
-				map[string]any{
-					"interval": c.duration.String(),
-					"time":     i.Format(time.RFC3339),
-				},
-			)
-		}
-	}()
-
-	return notifyChan
+	ctx, cancel := context.WithCancel(global.CTX())
+	defer cancel()
+	for i := range c.ticker.C {
+		event := NewMetaData(
+			"interval",
+			map[string]any{
+				"interval": c.duration.String(),
+				"time":     i.Format(time.RFC3339),
+			},
+		)
+		ed.Emit(ctx, event)
+	}
 }

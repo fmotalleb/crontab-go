@@ -2,6 +2,8 @@
 package event
 
 import (
+	"context"
+
 	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
 
@@ -42,7 +44,7 @@ func NewCron(schedule string, c *cron.Cron, logger *zap.Logger) abstraction.Even
 }
 
 // BuildTickChannel implements abstraction.Scheduler.
-func (c *Cron) BuildTickChannel() abstraction.EventChannel {
+func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 	if c.entry != nil {
 		c.logger.Fatal("already built the ticker channel")
 	}
@@ -61,7 +63,11 @@ func (c *Cron) BuildTickChannel() abstraction.EventChannel {
 		)
 		c.entry = &entry
 	}
-	return notifyChan
+	ctx, cancel := context.WithCancel(global.CTX().Context)
+	defer cancel()
+	for e := range notifyChan {
+		ed.Emit(ctx, e)
+	}
 }
 
 type cronJob struct {

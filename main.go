@@ -70,3 +70,8 @@ func main() {
 	}
 	<-global.CTX().Done()
 }
+
+type User struct {
+	ID   int
+	Name string
+}

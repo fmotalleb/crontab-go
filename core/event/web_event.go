@@ -1,6 +1,8 @@
 package event
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
@@ -30,17 +32,19 @@ func NewWebEventListener(event string) abstraction.EventGenerator {
 }
 
 // BuildTickChannel implements abstraction.Scheduler.
-func (w *WebEventListener) BuildTickChannel() abstraction.EventChannel {
-	notifyChan := make(abstraction.EventEmitChannel)
+func (w *WebEventListener) BuildTickChannel(ed abstraction.EventDispatcher) {
+	ctx, cancel := context.WithCancel(global.CTX())
+	defer cancel()
 	global.CTX().AddEventListener(
 		w.event, func(params map[string]any) {
-			notifyChan <- NewMetaData(
+			event := NewMetaData(
 				"web",
 				map[string]any{
 					"event":  w.event,
 					"params": params,
 				})
+			ed.Emit(ctx, event)
 		},
 	)
-	return notifyChan
+	<-ctx.Done()
 }

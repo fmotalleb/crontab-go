@@ -2,6 +2,7 @@ package event
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"io"
 	"math"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/global"
 	"github.com/fmotalleb/crontab-go/core/utils"
 )
 
@@ -79,50 +81,48 @@ func NewLogFile(filePath string, lineBreaker string, matcherStr string, checkCyc
 }
 
 // BuildTickChannel implements abstraction.Scheduler.
-func (lf *LogFile) BuildTickChannel() abstraction.EventChannel {
-	notifyChan := make(abstraction.EventEmitChannel)
-	go func() {
-		// Use bufio to read file line by line
-		file, err := os.Open(lf.filePath)
-		if err != nil {
-			lf.logger.Error("failed to open log file", zap.Error(err))
-		}
-		defer func() {
-			if err = file.Close(); err != nil {
-				lf.logger.Warn("failed to close log file", zap.Error(err))
-			}
-		}()
-		reader := bufio.NewReader(file)
-		_, err = reader.Discard(math.MaxInt64)
-		if err != nil && !errors.Is(err, io.EOF) {
-			lf.logger.Warn("error skipping initial data", zap.Error(err))
-			return
-		}
-		for {
-			data, err := reader.ReadString(byte(0))
-			if err != nil && err != io.EOF {
-				lf.logger.Error("error reading log file", zap.Error(err))
-				return
-			}
-			for _, line := range strings.Split(data, lf.lineBreaker) {
-				matches := lf.matcher.FindStringSubmatch(line)
-				if matches != nil {
-					names := lf.matcher.SubexpNames()
-
-					notifyChan <- NewMetaData(
-						"log-file",
-						map[string]any{
-							"file":   lf.filePath,
-							"line":   line,
-							"groups": reshapeRegxpMatch(names, matches),
-						},
-					)
-				}
-			}
-			time.Sleep(lf.checkCycle)
+func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
+	file, err := os.Open(lf.filePath)
+	if err != nil {
+		lf.logger.Error("failed to open log file", zap.Error(err))
+	}
+	defer func() {
+		if err = file.Close(); err != nil {
+			lf.logger.Warn("failed to close log file", zap.Error(err))
 		}
 	}()
-	return notifyChan
+	reader := bufio.NewReader(file)
+	_, err = reader.Discard(math.MaxInt64)
+
+	ctx, cancel := context.WithCancel(global.CTX())
+	defer cancel()
+	if err != nil && !errors.Is(err, io.EOF) {
+		lf.logger.Warn("error skipping initial data", zap.Error(err))
+		return
+	}
+	for {
+		data, err := reader.ReadString(byte(0))
+		if err != nil && err != io.EOF {
+			lf.logger.Error("error reading log file", zap.Error(err))
+			return
+		}
+		for _, line := range strings.Split(data, lf.lineBreaker) {
+			matches := lf.matcher.FindStringSubmatch(line)
+			if matches != nil {
+				names := lf.matcher.SubexpNames()
+				event := NewMetaData(
+					"log-file",
+					map[string]any{
+						"file":   lf.filePath,
+						"line":   line,
+						"groups": reshapeRegxpMatch(names, matches),
+					},
+				)
+				ed.Emit(ctx, event)
+			}
+		}
+		time.Sleep(lf.checkCycle)
+	}
 }
 
 func reshapeRegxpMatch(keys []string, matches []string) map[string]string {

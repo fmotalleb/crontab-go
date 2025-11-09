@@ -50,14 +50,9 @@ func (c *Context) MetricCounter(
 	return c.MetricCounter(ctx, name, help, labels)
 }
 
-func (c *Context) CountSignals(ctx context.Context, name string, signal abstraction.EventChannel, help string, labels prometheus.Labels) abstraction.EventChannel {
+func (c *Context) CountSignals(ctx context.Context, name string, signal abstraction.EventDispatcher, help string, labels prometheus.Labels) {
 	counter := c.MetricCounter(ctx, name, help, labels)
-	out := make(abstraction.EventEmitChannel)
-	go func() {
-		for c := range signal {
-			counter.Set(counter.Get() + 1)
-			out <- c
-		}
-	}()
-	return out
+	signal.AddListener(func(_ context.Context, _ abstraction.Event) {
+		counter.Set(counter.Get() + 1)
+	})
 }

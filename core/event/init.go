@@ -1,6 +1,8 @@
 package event
 
 import (
+	"context"
+
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
@@ -21,13 +23,7 @@ func newInitGenerator(_ *zap.Logger, cfg *config.JobEvent) (abstraction.EventGen
 type Init struct{}
 
 // BuildTickChannel implements abstraction.Scheduler.
-func (c *Init) BuildTickChannel() abstraction.EventChannel {
-	notifyChan := make(abstraction.EventEmitChannel)
-
-	go func() {
-		notifyChan <- NewMetaData("init", map[string]any{})
-		close(notifyChan)
-	}()
-
-	return notifyChan
+func (c *Init) BuildTickChannel(ed abstraction.EventDispatcher) {
+	ctx := context.Background()
+	ed.Emit(ctx, NewMetaData("init", map[string]any{}))
 }
