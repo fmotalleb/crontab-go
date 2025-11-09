@@ -96,7 +96,7 @@ func NewLogFile(filePath string, lineBreaker string, matcherStr string, checkCyc
 func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 	file, err := os.Open(lf.filePath)
 	if err != nil {
-		lf.logger.Error("failed to open log file", zap.Error(err))
+		lf.logger.Fatal("failed to open log file", zap.Error(err))
 	}
 	defer func() {
 		if err = file.Close(); err != nil {

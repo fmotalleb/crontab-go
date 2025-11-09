@@ -52,7 +52,7 @@ func main() {
 	initializeGlobalState()
 	l := global.Logger("cron")
 	l.Info("Booting up")
-	go jobs.InitializeJobs()
+	jobs.InitializeJobs()
 	if cmd.CFG.WebServerAddress != "" {
 		go webserver.
 			NewWebServer(
@@ -69,9 +69,4 @@ func main() {
 			Serve()
 	}
 	<-global.CTX().Done()
-}
-
-type User struct {
-	ID   int
-	Name string
 }

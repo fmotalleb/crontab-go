@@ -197,7 +197,7 @@ func (dockerEvent *DockerEvent) matches(msg *events.Message) bool {
 	}
 
 	for k, matcher := range dockerEvent.labels {
-		if attrib, ok := msg.Actor.Attributes[k]; !ok && !matcher.MatchString(attrib) {
+		if attrib, ok := msg.Actor.Attributes[k]; !ok || !matcher.MatchString(attrib) {
 			return false
 		}
 	}

@@ -15,7 +15,7 @@ import (
 
 func initEventSignal(ed abstraction.EventDispatcher, events []abstraction.EventGenerator, logger *zap.Logger) {
 	for _, ev := range events {
-		ev.BuildTickChannel(ed)
+		go ev.BuildTickChannel(ed)
 	}
 	logger.Debug("signals initialized")
 }
