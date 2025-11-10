@@ -20,20 +20,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/robfig/cron/v3"
-
 	"github.com/fmotalleb/crontab-go/cmd"
-	"github.com/fmotalleb/crontab-go/core/global"
-	"github.com/fmotalleb/crontab-go/core/jobs"
-	"github.com/fmotalleb/crontab-go/core/webserver"
 	"github.com/fmotalleb/crontab-go/meta"
 )
-
-func initializeGlobalState() {
-	cronInstance := cron.New(cron.WithSeconds())
-	global.Put(cronInstance)
-	cronInstance.Start()
-}
 
 func main() {
 	defer func() {
@@ -48,25 +37,4 @@ func main() {
 	}()
 
 	cmd.Execute()
-
-	initializeGlobalState()
-	l := global.Logger("cron")
-	l.Info("Booting up")
-	jobs.InitializeJobs()
-	if cmd.CFG.WebServerAddress != "" {
-		go webserver.
-			NewWebServer(
-				global.CTX(),
-				cmd.CFG.WebServerAddress,
-				cmd.CFG.WebServerPort,
-
-				cmd.CFG.WebServerMetrics,
-				&webserver.AuthConfig{
-					Username: cmd.CFG.WebserverUsername,
-					Password: cmd.CFG.WebServerPassword,
-				},
-			).
-			Serve()
-	}
-	<-global.CTX().Done()
 }

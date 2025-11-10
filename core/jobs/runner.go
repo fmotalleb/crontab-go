@@ -6,15 +6,14 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/fmotalleb/crontab-go/abstraction"
-	"github.com/fmotalleb/crontab-go/cmd"
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/concurrency"
 	"github.com/fmotalleb/crontab-go/core/global"
 )
 
-func InitializeJobs() {
+func InitializeJobs(jobs []*config.JobConfig) {
 	log := global.Logger("Cron")
-	for _, job := range cmd.CFG.Jobs {
+	for _, job := range jobs {
 		if job.Disabled {
 			log.Warn("job is disabled", zap.String("job.name", job.Name))
 			continue

@@ -10,11 +10,15 @@ import (
 	"github.com/fmotalleb/go-tools/git"
 	"github.com/fmotalleb/go-tools/log"
 	"github.com/joho/godotenv"
+	"github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/fmotalleb/crontab-go/cmd/parser"
 	"github.com/fmotalleb/crontab-go/config"
+	"github.com/fmotalleb/crontab-go/core/global"
+	"github.com/fmotalleb/crontab-go/core/jobs"
+	"github.com/fmotalleb/crontab-go/core/webserver"
 )
 
 var (
@@ -38,6 +42,28 @@ within your containerized applications.`,
 	},
 	Run: func(_ *cobra.Command, _ []string) {
 		initConfig()
+		cronInstance := cron.New(cron.WithSeconds())
+		global.Put(cronInstance)
+		cronInstance.Start()
+		l := global.Logger("cron")
+		l.Info("Booting up")
+		jobs.InitializeJobs(CFG.Jobs)
+		if CFG.WebServerAddress != "" {
+			go webserver.
+				NewWebServer(
+					global.CTX(),
+					CFG.WebServerAddress,
+					CFG.WebServerPort,
+
+					CFG.WebServerMetrics,
+					&webserver.AuthConfig{
+						Username: CFG.WebserverUsername,
+						Password: CFG.WebServerPassword,
+					},
+				).
+				Serve()
+		}
+		<-global.CTX().Done()
 	},
 }
 
