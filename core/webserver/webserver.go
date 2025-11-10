@@ -47,6 +47,7 @@ func NewWebServer(ctx context.Context,
 
 func (s *WebServer) Serve() {
 	engine := echo.New()
+
 	auth := func(next echo.HandlerFunc) echo.HandlerFunc {
 		return next
 	}
@@ -111,7 +112,12 @@ func (s *WebServer) Serve() {
 			return c.String(http.StatusNotFound, "Metrics are disabled, please enable metrics using `WEBSERVER_METRICS=true`")
 		})
 	}
-	if err := engine.Start(fmt.Sprintf("%s:%d", s.address, s.port)); err != nil {
+	addr := fmt.Sprintf("%s:%d", s.address, s.port)
+	s.log.Info("starting server", zap.String("address", addr))
+	engine.HideBanner = true
+	engine.HidePort = true
+	engine.Debug = s.log.Level() == zap.DebugLevel
+	if err := engine.Start(addr); err != nil {
 		s.log.Fatal("failed to start webserver", zap.Error(err))
 	}
 }
