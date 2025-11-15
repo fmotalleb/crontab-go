@@ -96,22 +96,24 @@ func (r *Retry) ExecuteRetry(ctx context.Context, fn func(context.Context) error
 	if r.maxTimeout != 0 {
 		backoff = retry.WithMaxDuration(r.maxTimeout, backoff)
 	}
-	if r.maxRetries != 0 {
-		backoff = retry.WithMaxRetries(r.maxRetries, backoff)
-	} else {
-		backoff = retry.WithMaxRetries(1, backoff)
-	}
+
+	backoff = retry.WithMaxRetries(r.maxRetries, backoff)
+
 	if r.jitter != 0 {
 		backoff = retry.WithJitter(r.jitter, backoff)
 	}
-	var lastErr error
-	for {
-		wt, stop := backoff.Next()
-		if stop {
-			break
-		}
-		lastErr = retry.Do(ctx, backoff, fn)
-		time.Sleep(wt)
-	}
-	return lastErr
+	// var lastErr error
+	// for {
+	// 	wt, stop := backoff.Next()
+	// 	if stop {
+	// 		break
+	// 	}
+	// 	lastErr = retry.Do(ctx, backoff, fn)
+	// 	if lastErr == nil {
+	// 		break
+	// 	}
+	// 	time.Sleep(wt)
+	// }
+	err := retry.Do(ctx, backoff, fn)
+	return err
 }

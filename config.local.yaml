@@ -5,10 +5,11 @@ jobs:
   - name: echo
     concurrency: 3
     tasks:
-      - command: echo $env.{{ .Vars.name }}
+      - command: echo $env.t{{ .Vars.name }}
         retry-delay: 1s
         retries: 0
         retry-jitter: 1s
+        retry-mode: fibonacci
         vars:
           name: '{{ now | date "2006-01-02_15-04-05" }}'
         # connections:
