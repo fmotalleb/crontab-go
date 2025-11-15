@@ -92,3 +92,12 @@ This file summarizes notable changes for each released tag. Trivial noise (merge
 - Refactor: metrics re-wrote.
 - Refactor: log-file event system re-wrote.
 - Refactor/Cleanup: removed useless functions and methods.
+
+## v0.11.1 (2025-11-15)
+
+- Feat: Configurable retry strategies: constant, exponential, and fibonacci backoffs
+- Feat: New retry settings: timeout, max delay, jitter, and retry-mode; defaults now applied after config load
+
+- Retry behavior is configuration-driven with improved backoff and constraints
+- Task command syntax updated to support environment-style references
+- Task execution flow simplified: failures return immediately (fewer automatic re-runs/hooks)
