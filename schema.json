@@ -299,6 +299,34 @@
           "description": "A string that represents the delay between retries.",
           "example": "1s 10m15s"
         },
+        "retry-mode": {
+          "type": "string",
+          "description": "Retry duration modifier.",
+          "examples": [
+            "exponential (default)",
+            "constant",
+            "fibonacci",
+            "fibo",
+            "expo",
+            "cons",
+            "const"
+          ]
+        },
+        "retry-timeout": {
+          "type": "string",
+          "description": "How long it takes for retry mechanism to give-up.",
+          "example": "1s 10m15s"
+        },
+        "retry-max-delay": {
+          "type": "string",
+          "description": "Maximum duration for retry delay (if using exponential or fibonacci modifiers).",
+          "example": "1s 10m15s"
+        },
+        "retry-jitter": {
+          "type": "string",
+          "description": "Jitter to change round timing issues.",
+          "example": "1s 10m15s"
+        },
         "timeout": {
           "type": "string",
           "description": "A string that represents the timeout for the task."

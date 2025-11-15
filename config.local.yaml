@@ -5,13 +5,13 @@ jobs:
   - name: echo
     concurrency: 3
     tasks:
-      - command: echo {{ .Vars.name }}; sleep 5sec
+      - command: echo $env.t{{ .Vars.name }}
+        retry-delay: 1s
+        retries: 0
+        retry-jitter: 1s
+        retry-mode: fibonacci
         vars:
           name: '{{ now | date "2006-01-02_15-04-05" }}'
-        env:
-          COLE: test
-        on-done:
-          - command: echo {{ .Vars.name }}; sleep 1sec
         # connections:
         #   - image: "library/alpine"
 

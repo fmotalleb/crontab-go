@@ -81,9 +81,14 @@ type Task struct {
 	Connections      []TaskConnection  `mapstructure:"connections" json:"connections,omitempty"`
 
 	// Retry & Timeout config
-	Retries    int64         `mapstructure:"retries" json:"retries,omitempty"`
-	RetryDelay time.Duration `mapstructure:"retry-delay" json:"retry-delay,omitempty"`
-	Timeout    time.Duration `mapstructure:"timeout" json:"timeout,omitempty"`
+	Retries       uint64        `mapstructure:"retries" json:"retries,omitempty"`
+	RetryDelay    time.Duration `mapstructure:"retry-delay" default:"15s" json:"retry-delay,omitempty"`
+	RetryTimeout  time.Duration `mapstructure:"retry-timeout" json:"retry-timeout,omitempty"`
+	RetryMaxDelay time.Duration `mapstructure:"retry-max-delay" json:"retry-max-delay,omitempty"`
+	RetryJitter   time.Duration `mapstructure:"retry-jitter" json:"retry-jitter,omitempty"`
+	RetryModifier string        `mapstructure:"retry-mode" json:"retry-mode,omitempty"`
+
+	Timeout time.Duration `mapstructure:"timeout" json:"timeout,omitempty"`
 
 	// Hooks
 	OnDone []Task `mapstructure:"on-done" json:"on-done,omitempty"`

@@ -33,17 +33,15 @@ func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, boo
 			zap.String("method", "post"),
 		),
 	}
-	post.SetMaxRetry(task.Retries)
-	post.SetRetryDelay(task.RetryDelay)
+	post.ConfigRetryFrom(task)
 	post.SetTimeout(task.Timeout)
 	post.SetMetaName("post: " + task.Post)
 	return post, true
 }
 
 type Post struct {
-	common.Hooked
+	common.Executable
 	common.Cancelable
-	common.Retry
 	common.Timeout
 	task *config.Task
 
@@ -54,11 +52,9 @@ type Post struct {
 }
 
 // Execute implements abstraction.Executable.
-func (p *Post) Execute(ctx context.Context) (e error) {
+func (p *Post) Do(ctx context.Context) (e error) {
 	ctx = populateVars(ctx, p.task)
-	r := common.GetRetry(ctx)
 	log := p.log.With(
-		zap.Any("retry", r),
 		zap.Time("start", time.Now()),
 	)
 	defer func() {
@@ -72,13 +68,6 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 		}
 	}()
 
-	if err := p.WaitForRetry(ctx); err != nil {
-		p.DoFailHooks(ctx)
-		return err
-	}
-
-	ctx = common.IncreaseRetry(ctx)
-
 	var localCtx context.Context
 	var cancel context.CancelFunc
 	localCtx, cancel = p.ApplyTimeout(ctx)
@@ -90,7 +79,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 		data, err := json.Marshal(p.data)
 		if err != nil {
 			log.Warn("cannot marshal the given body (pre-send)", zap.Error(err))
-			return p.Execute(ctx)
+			return err
 		}
 		dataReader = bytes.NewReader(data)
 	}
@@ -99,7 +88,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 	log.Debug("sending post http request")
 	if err != nil {
 		log.Warn("cannot create the request (pre-send)", zap.Error(err))
-		return p.Execute(ctx)
+		return err
 	}
 
 	for key, val := range *p.headers {
@@ -126,9 +115,7 @@ func (p *Post) Execute(ctx context.Context) (e error) {
 
 	if err != nil || (res != nil && res.StatusCode >= 400) {
 		log.Warn("request failed", zap.Error(err))
-		return p.Execute(ctx)
+		return err
 	}
-
-	p.DoDoneHooks(ctx)
 	return nil
 }
