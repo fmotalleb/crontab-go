@@ -38,9 +38,8 @@ func NewGet(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool
 }
 
 type Get struct {
-	common.Hooked
+	common.RetryHooked
 	common.Cancelable
-	common.Retry
 	common.Timeout
 	task    *config.Task
 	address string
@@ -49,11 +48,9 @@ type Get struct {
 }
 
 // Execute implements abstraction.Executable.
-func (g *Get) Execute(ctx context.Context) (e error) {
+func (g *Get) Do(ctx context.Context) (e error) {
 	ctx = populateVars(ctx, g.task)
-	r := common.GetRetry(ctx)
 	log := g.log.With(
-		zap.Any("retry", r),
 		zap.Time("start", time.Now()),
 	)
 	defer func() {
@@ -67,12 +64,6 @@ func (g *Get) Execute(ctx context.Context) (e error) {
 		}
 	}()
 
-	if err := g.WaitForRetry(ctx); err != nil {
-		g.DoFailHooks(ctx)
-		return err
-	}
-	ctx = common.IncreaseRetry(ctx)
-
 	localCtx, cancel := g.ApplyTimeout(ctx)
 	g.SetCancel(cancel)
 
@@ -81,7 +72,7 @@ func (g *Get) Execute(ctx context.Context) (e error) {
 	log.Debug("sending get http request")
 	if err != nil {
 		log.Warn("cannot create the request (pre-send)", zap.Error(err))
-		return g.Execute(ctx)
+		return err
 	}
 	for key, val := range *g.headers {
 		req.Header.Add(key, val)
@@ -105,8 +96,7 @@ func (g *Get) Execute(ctx context.Context) (e error) {
 	}
 	if err != nil || (res != nil && res.StatusCode >= 400) {
 		log.Warn("request failed", zap.Error(err))
-		return g.Execute(ctx)
+		return err
 	}
-	g.DoDoneHooks(ctx)
 	return nil
 }

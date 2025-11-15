@@ -81,7 +81,7 @@ type Task struct {
 	Connections      []TaskConnection  `mapstructure:"connections" json:"connections,omitempty"`
 
 	// Retry & Timeout config
-	Retries    int64         `mapstructure:"retries" json:"retries,omitempty"`
+	Retries    uint64        `mapstructure:"retries" json:"retries,omitempty"`
 	RetryDelay time.Duration `mapstructure:"retry-delay" json:"retry-delay,omitempty"`
 	Timeout    time.Duration `mapstructure:"timeout" json:"timeout,omitempty"`
 

@@ -10,6 +10,7 @@ import (
 )
 
 type Hooked struct {
+	Retry
 	metaName  string
 	doneHooks []abstraction.Executable
 	failHooks []abstraction.Executable
@@ -49,7 +50,6 @@ func (h *Hooked) DoDoneHooks(ctx context.Context) []error {
 		global.OKMetricHelp,
 		h.GetMeta(),
 	)
-	ctx = ResetRetries(ctx)
 	return executeTasks(ctx, h.doneHooks)
 }
 
@@ -59,7 +59,6 @@ func (h *Hooked) DoFailHooks(ctx context.Context) []error {
 		global.ErrMetricHelp,
 		h.GetMeta(),
 	)
-	ctx = ResetRetries(ctx)
 	return executeTasks(ctx, h.failHooks)
 }
 

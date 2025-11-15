@@ -3,6 +3,7 @@ package task
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.uber.org/zap"
@@ -40,21 +41,18 @@ func NewCommand(
 }
 
 type Command struct {
-	common.Hooked
+	common.RetryHooked
 	common.Cancelable
-	common.Retry
 	common.Timeout
 
 	task *config.Task
 	log  *zap.Logger
 }
 
-// Execute implements abstraction.Executable.
-func (c *Command) Execute(ctx context.Context) (e error) {
+// Execute implements common.Retry.
+func (c *Command) Do(ctx context.Context) (e error) {
 	ctx = populateVars(ctx, c.task)
-	r := common.GetRetry(ctx)
 	log := c.log.With(
-		zap.Any("retry", r),
 		zap.Time("start", time.Now()),
 	)
 	defer func() {
@@ -67,17 +65,7 @@ func (c *Command) Execute(ctx context.Context) (e error) {
 			log.Warn("a non-error panic accord", zap.Any("error", err))
 		}
 	}()
-
-	if err := c.WaitForRetry(ctx); err != nil {
-		c.DoFailHooks(ctx)
-		return err
-	}
-
-	ctx = common.IncreaseRetry(ctx)
 	connections := c.task.Connections
-	if fc := getFailedConnections(ctx); len(fc) != 0 {
-		connections = fc
-	}
 	if len(connections) == 0 {
 		connections = []config.TaskConnection{
 			{
@@ -95,38 +83,31 @@ func (c *Command) Execute(ctx context.Context) (e error) {
 		c.SetCancel(cancel)
 
 		if err := connection.Prepare(cmdCtx, c.task); err != nil {
-			l.Warn("cannot prepare command", zap.Error(err))
-			ctx = addFailedConnections(ctx, conn)
+			l.Error("cannot prepare command", zap.Error(err))
 			helpers.WarnOnErrIgnored(
 				l,
 				connection.Disconnect,
 				"Cannot disconnect the command's connection",
 			)
-			continue
+			return errors.Join(errors.New("failed to prepare"), err)
 		}
 
 		if err := connection.Connect(); err != nil {
-			l.Warn("error when tried to connect, exiting current remote", zap.Error(err))
-			ctx = addFailedConnections(ctx, conn)
-			continue
+			l.Error("error when tried to connect, exiting current remote", zap.Error(err))
+			return errors.Join(errors.New("failed to connect"), err)
 		}
 		ans, err := connection.Execute()
 		if err != nil {
-			ctx = addFailedConnections(ctx, conn)
+			l.Error("failed to run command", zap.Error(err))
+			return errors.Join(errors.New("failed to execute command"), err)
 		}
 		l.Info("command finished", zap.ByteString("result", ans), zap.Error(err))
 		if err := connection.Disconnect(); err != nil {
 			l.Warn("error when tried to disconnect", zap.Error(err))
-			ctx = addFailedConnections(ctx, conn)
+			// return errors.Join(errors.New("failed to execute command"), err)
 			continue
 		}
 	}
-	if fc := getFailedConnections(ctx); len(fc) != 0 {
-		return c.Execute(ctx)
-	}
 
-	if errs := c.DoDoneHooks(ctx); len(errs) != 0 {
-		log.Warn("command finished successfully but its hooks failed")
-	}
 	return nil
 }
