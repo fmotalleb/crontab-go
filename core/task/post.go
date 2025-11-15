@@ -33,15 +33,14 @@ func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, boo
 			zap.String("method", "post"),
 		),
 	}
-	post.SetMaxRetry(task.Retries)
-	post.SetRetryDelay(task.RetryDelay)
+	post.ConfigRetryFrom(task)
 	post.SetTimeout(task.Timeout)
 	post.SetMetaName("post: " + task.Post)
 	return post, true
 }
 
 type Post struct {
-	common.RetryHooked
+	common.Executable
 	common.Cancelable
 	common.Timeout
 	task *config.Task

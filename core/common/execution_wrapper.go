@@ -7,14 +7,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type RetryHooked struct {
+type Action interface {
+	Do(ctx context.Context) (e error)
+}
+
+type Executable struct {
 	Retry
 	Hooked
+	Action
 }
 
 // Execute implements abstraction.Executable.
-func (rh *RetryHooked) Execute(ctx context.Context) error {
-	err := rh.ExecuteRetry(ctx)
+func (rh *Executable) Execute(ctx context.Context) error {
+	err := rh.ExecuteRetry(ctx, rh.Do)
 	if err != nil {
 		errs := rh.DoDoneHooks(ctx)
 		if len(errs) != 0 {

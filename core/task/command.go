@@ -33,15 +33,15 @@ func NewCommand(
 
 		task: task,
 	}
-	cmd.SetMaxRetry(task.Retries)
-	cmd.SetRetryDelay(task.RetryDelay)
+	cmd.ConfigRetryFrom(task)
 	cmd.SetTimeout(task.Timeout)
 	cmd.SetMetaName("cmd: " + task.Command)
+	cmd.Action = cmd
 	return cmd, true
 }
 
 type Command struct {
-	common.RetryHooked
+	common.Executable
 	common.Cancelable
 	common.Timeout
 
@@ -49,8 +49,8 @@ type Command struct {
 	log  *zap.Logger
 }
 
-// Execute implements common.Retry.
-func (c *Command) Do(ctx context.Context) (e error) {
+// Execute implements common.RetryHooked.
+func (c Command) Do(ctx context.Context) (e error) {
 	ctx = populateVars(ctx, c.task)
 	log := c.log.With(
 		zap.Time("start", time.Now()),

@@ -30,15 +30,14 @@ func NewGet(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool
 			zap.String("method", "get"),
 		),
 	}
-	get.SetMaxRetry(task.Retries)
-	get.SetRetryDelay(task.RetryDelay)
+	get.ConfigRetryFrom(task)
 	get.SetTimeout(task.Timeout)
 	get.SetMetaName("get: " + task.Get)
 	return get, true
 }
 
 type Get struct {
-	common.RetryHooked
+	common.Executable
 	common.Cancelable
 	common.Timeout
 	task    *config.Task

@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/fmotalleb/go-tools/defaulter"
 	"github.com/fmotalleb/go-tools/env"
 	"github.com/fmotalleb/go-tools/git"
 	"github.com/fmotalleb/go-tools/log"
@@ -145,6 +146,7 @@ func initConfig() {
 		CFG.Validate(),
 		"Failed to initialize config file: %s",
 	)
+	defaulter.ApplyDefaults(CFG, CFG)
 }
 
 func setupEnv() {

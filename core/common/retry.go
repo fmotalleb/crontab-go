@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/sethvargo/go-retry"
+
+	"github.com/fmotalleb/crontab-go/config"
 )
 
 type (
@@ -21,12 +23,7 @@ const (
 	RetryFibonacci   = DelayModifier("fibo")
 )
 
-type RetryWrapper interface {
-	Do(context.Context) error
-}
 type Retry struct {
-	RetryWrapper
-
 	// Backoff
 	maxRetries RetryCount
 	maxTimeout time.Duration
@@ -68,11 +65,20 @@ func (r *Retry) SetDelayModifierFromString(s string) {
 		r.delayModifier = RetryFibonacci
 	default:
 		// Maybe add some logging here
-		r.delayModifier = RetryConstant
+		r.delayModifier = RetryExponential
 	}
 }
 
-func (r *Retry) ExecuteRetry(ctx context.Context) error {
+func (r *Retry) ConfigRetryFrom(t *config.Task) {
+	r.SetMaxRetry(t.Retries)
+	r.SetRetryDelay(t.RetryDelay)
+	r.SetMaxTimeout(t.RetryTimeout)
+	r.SetMaxDelay(t.RetryMaxDelay)
+	r.SetJitter(t.RetryJitter)
+	r.SetDelayModifierFromString(t.RetryModifier)
+}
+
+func (r *Retry) ExecuteRetry(ctx context.Context, fn func(context.Context) error) error {
 	var backoff retry.Backoff
 	switch r.delayModifier {
 	case RetryConstant:
@@ -92,9 +98,20 @@ func (r *Retry) ExecuteRetry(ctx context.Context) error {
 	}
 	if r.maxRetries != 0 {
 		backoff = retry.WithMaxRetries(r.maxRetries, backoff)
+	} else {
+		backoff = retry.WithMaxRetries(1, backoff)
 	}
 	if r.jitter != 0 {
 		backoff = retry.WithJitter(r.jitter, backoff)
 	}
-	return retry.Do(ctx, backoff, r.Do)
+	var lastErr error
+	for {
+		wt, stop := backoff.Next()
+		if stop {
+			break
+		}
+		lastErr = retry.Do(ctx, backoff, fn)
+		time.Sleep(wt)
+	}
+	return lastErr
 }
