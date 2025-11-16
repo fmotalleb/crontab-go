@@ -5,6 +5,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
+	"github.com/fmotalleb/go-tools/debouncer"
+
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/concurrency"
@@ -34,7 +36,10 @@ func InitializeJobs(jobs []*config.JobConfig) {
 		if err := job.Validate(logger.Named("Validator")); err != nil {
 			log.Panic("failed to validate job", zap.String("job", job.Name), zap.Error(err))
 		}
-		signal := signals.NewSync[abstraction.Event]()
+		var signal abstraction.EventDispatcher = signals.NewSync[abstraction.Event]()
+		if job.Debounce > 0 {
+			signal = debouncer.NewDebouncedSignal(signal, job.Debounce)
+		}
 		global.CountSignals(signal,
 			"events",
 			"amount of events dispatched for this job",

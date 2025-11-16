@@ -38,6 +38,14 @@
           "type": "boolean",
           "description": "An optional boolean that indicates whether the job is disabled or not."
         },
+        "debounce": {
+          "type": "string",
+          "description": "Debounce duration. Every new event is dispatched immediately, and an event is guaranteed after the debounce interval elapses.",
+          "examples": [
+            "1s",
+            "10m"
+          ]
+        },
         "tasks": {
           "type": "array",
           "items": {

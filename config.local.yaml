@@ -4,8 +4,9 @@
 jobs:
   - name: echo
     concurrency: 3
+    debounce: 5s
     tasks:
-      - command: echo $env.t{{ .Vars.name }}
+      - command: echo {{ .Vars.name }}
         retry-delay: 1s
         retries: 0
         retry-jitter: 1s
