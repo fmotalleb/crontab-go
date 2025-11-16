@@ -37,7 +37,7 @@ func InitializeJobs(jobs []*config.JobConfig) {
 			log.Panic("failed to validate job", zap.String("job", job.Name), zap.Error(err))
 		}
 		var signal abstraction.EventDispatcher = signals.NewSync[abstraction.Event]()
-		if job.Debounce >= 0 {
+		if job.Debounce > 0 {
 			signal = debouncer.NewDebouncedSignal(signal, job.Debounce)
 		}
 		global.CountSignals(signal,
