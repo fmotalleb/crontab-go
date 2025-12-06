@@ -11,7 +11,7 @@ tool (
 require (
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/fmotalleb/go-tools v0.1.56
+	github.com/fmotalleb/go-tools v0.1.58
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/maniartech/signals v1.3.1
@@ -237,8 +237,6 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.35.0 // indirect
-	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
-	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
 	golang.org/x/vuln v1.1.4 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
