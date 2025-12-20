@@ -104,6 +104,7 @@ type TaskConnection struct {
 	Local            bool     `mapstructure:"local" json:"local,omitempty"`
 	DockerConnection string   `mapstructure:"docker" json:"docker,omitempty"`
 	ContainerName    string   `mapstructure:"container" json:"container,omitempty"`
+	ContainerLabel   string   `mapstructure:"label" json:"label,omitempty"`
 	ImageName        string   `mapstructure:"image" json:"image,omitempty"`
 	Volumes          []string `mapstructure:"volumes" json:"volumes,omitempty"`
 	Networks         []string `mapstructure:"networks" json:"networks,omitempty"`

@@ -3,9 +3,12 @@ package connection
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"go.uber.org/zap"
 
@@ -35,7 +38,7 @@ type DockerAttachConnection struct {
 // Returns:
 // - A new instance of DockerAttachConnection implementing the CmdConnection interface.
 func NewDockerAttachConnection(log *zap.Logger, conn *config.TaskConnection) (abstraction.CmdConnection, bool) {
-	if conn.ContainerName == "" {
+	if conn.ContainerName == "" && conn.ContainerLabel == "" {
 		return nil, false
 	}
 	res := &DockerAttachConnection{
@@ -59,11 +62,37 @@ func (d *DockerAttachConnection) Prepare(ctx context.Context, task *config.Task)
 	cmdCtx := command.NewCtx(ctx, task.Env, d.log)
 	d.ctx = ctx
 	// Specify the container ID or name
-	d.containerID = d.conn.ContainerName
 	if d.conn.DockerConnection == "" {
 		d.log.Debug("No explicit docker connection specified, using default: `unix:///var/run/docker.sock`")
 		d.conn.DockerConnection = "unix:///var/run/docker.sock"
 	}
+	cid := d.conn.ContainerName
+	if cid == "" {
+		label := d.conn.ContainerLabel
+		if label == "" {
+			return errors.New("neither container name nor label provided")
+		}
+
+		args := filters.NewArgs()
+		args.Add("label", label)
+
+		containers, err := d.cli.ContainerList(ctx, container.ListOptions{
+			Filters: args,
+		})
+		if err != nil {
+			return err
+		}
+
+		if len(containers) == 0 {
+			return fmt.Errorf("no container found with label %q", label)
+		}
+
+		if len(containers) != 1 {
+			return fmt.Errorf("more than one container found with label %q", label)
+		}
+		cid = containers[0].ID
+	}
+	d.containerID = cid
 	shell, shellArgs, environments := cmdCtx.BuildExecuteParams(task.Command)
 	cmd := append(
 		[]string{shell},
