@@ -1,0 +1,13 @@
+services:
+  cron:
+    build:
+      context: .
+      target: slim
+    volumes:
+      - "./config.local.yaml:/config.yaml"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+  tester:
+    image: alpine:latest
+    command: ["sh", "-c", "while true; do echo hello world; sleep 5; done"]
+    labels:
+      - connection.selector=true

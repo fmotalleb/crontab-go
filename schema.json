@@ -436,6 +436,11 @@
           "title": "container name/id matcher",
           "description": "Should match only one container, if matches two or more container the command will fail"
         },
+        "label": {
+          "type": "string",
+          "title": "container label matcher",
+          "description": "Finds container that has this label, should match only one container, if matches two or more container the command will fail"
+        },
         "image": {
           "type": "string",
           "title": "Image name/id"

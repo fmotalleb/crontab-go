@@ -6,20 +6,23 @@ jobs:
     concurrency: 3
     debounce: 5s
     tasks:
-      - command: echo {{ .Vars.name }}
+      - command: echo {{ .Vars.name }}; cat /etc/os-release
+        env:
+          SHELL: /bin/sh
         retry-delay: 1s
         retries: 0
         retry-jitter: 1s
         retry-mode: fibonacci
         vars:
           name: '{{ now | date "2006-01-02_15-04-05" }}'
-        # connections:
-        #   - image: "library/alpine"
+        connections:
+          - label: "connection.selector"
 
     events:
       # - cron: "0 * * * * *"
       # - interval: 5s
       - on-init: true
       - web-event: test
-      # - docker:
-      #     image: nginx
+      - docker:
+          image: nginx
+          name: "(webserver|app|application)"

@@ -22,12 +22,11 @@ func init() {
 }
 
 type DockerAttachConnection struct {
-	conn        *config.TaskConnection
-	log         *zap.Logger
-	cli         *client.Client
-	execCFG     *container.ExecOptions
-	containerID string
-	ctx         context.Context
+	conn    *config.TaskConnection
+	log     *zap.Logger
+	cli     *client.Client
+	execCFG *container.ExecOptions
+	ctx     context.Context
 }
 
 // NewDockerAttachConnection creates a new DockerAttachConnection instance.
@@ -66,33 +65,6 @@ func (d *DockerAttachConnection) Prepare(ctx context.Context, task *config.Task)
 		d.log.Debug("No explicit docker connection specified, using default: `unix:///var/run/docker.sock`")
 		d.conn.DockerConnection = "unix:///var/run/docker.sock"
 	}
-	cid := d.conn.ContainerName
-	if cid == "" {
-		label := d.conn.ContainerLabel
-		if label == "" {
-			return errors.New("neither container name nor label provided")
-		}
-
-		args := filters.NewArgs()
-		args.Add("label", label)
-
-		containers, err := d.cli.ContainerList(ctx, container.ListOptions{
-			Filters: args,
-		})
-		if err != nil {
-			return err
-		}
-
-		if len(containers) == 0 {
-			return fmt.Errorf("no container found with label %q", label)
-		}
-
-		if len(containers) != 1 {
-			return fmt.Errorf("more than one container found with label %q", label)
-		}
-		cid = containers[0].ID
-	}
-	d.containerID = cid
 	shell, shellArgs, environments := cmdCtx.BuildExecuteParams(task.Command)
 	cmd := append(
 		[]string{shell},
@@ -135,8 +107,35 @@ func (d *DockerAttachConnection) Connect() error {
 // - A byte slice containing the command output.
 // - An error if the execution fails, otherwise nil.
 func (d *DockerAttachConnection) Execute() ([]byte, error) {
+	cid := d.conn.ContainerName
+	if cid == "" {
+		label := d.conn.ContainerLabel
+		if label == "" {
+			return nil, errors.New("neither container name nor label provided")
+		}
+
+		args := filters.NewArgs()
+		args.Add("label", label)
+
+		containers, err := d.cli.ContainerList(d.ctx, container.ListOptions{
+			Filters: args,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		if len(containers) == 0 {
+			return nil, fmt.Errorf("no container found with label %q", label)
+		}
+
+		if len(containers) != 1 {
+			return nil, fmt.Errorf("more than one container found with label %q", label)
+		}
+		cid = containers[0].ID
+	}
+
 	// Create the exec instance
-	exec, err := d.cli.ContainerExecCreate(d.ctx, d.containerID, *d.execCFG)
+	exec, err := d.cli.ContainerExecCreate(d.ctx, cid, *d.execCFG)
 	if err != nil {
 		return nil, err
 	}
