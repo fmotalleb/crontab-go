@@ -11,7 +11,7 @@ tool (
 require (
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/docker/docker v28.5.2+incompatible
-	github.com/fmotalleb/go-tools v0.1.70
+	github.com/fmotalleb/go-tools v0.1.71
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.14.0
 	github.com/maniartech/signals v1.3.1
