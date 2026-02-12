@@ -51,9 +51,9 @@ func (s *WebServer) Serve() {
 	auth := func(next echo.HandlerFunc) echo.HandlerFunc {
 		return next
 	}
-	if s.AuthConfig != nil && s.AuthConfig.Username != "" && s.AuthConfig.Password != "" {
+	if s.AuthConfig != nil && s.Username != "" && s.Password != "" {
 		auth = middleware.BasicAuth(func(username, password string, _ echo.Context) (bool, error) {
-			if username == s.AuthConfig.Username && password == s.AuthConfig.Password {
+			if username == s.Username && password == s.Password {
 				return true, nil
 			}
 			return false, nil

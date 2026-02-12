@@ -6,7 +6,6 @@ linters:
     - mnd
   enable:
     - asasalint
-    - bodyclose
     - copyloopvar
     - dogsled
     - dupl

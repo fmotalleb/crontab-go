@@ -21,7 +21,7 @@ type mockExecutable struct {
 
 func newTask(typeName string) *mockExecutable {
 	m := new(mockExecutable)
-	m.Hooked.SetMetaName(typeName)
+	m.SetMetaName(typeName)
 	return m
 }
 
