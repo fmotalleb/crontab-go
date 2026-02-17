@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -114,12 +113,7 @@ func (p *Post) Do(ctx context.Context) (e error) {
 		}
 	}
 
-	if err != nil {
-		log.Warn("request failed", zap.Error(err))
-		return err
-	}
-	if res != nil && res.StatusCode >= 400 {
-		err = fmt.Errorf("unexpected http status code: %d", res.StatusCode)
+	if err = validateHTTPResult(err, res); err != nil {
 		log.Warn("request failed", zap.Error(err))
 		return err
 	}

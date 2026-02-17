@@ -85,3 +85,35 @@ func TestJobEvent_Validate_MultipleActiveSchedules(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), expectedErr)
 }
+
+func TestJobEvent_Validate_DockerInvalidImagePattern(t *testing.T) {
+	event := config.JobEvent{
+		Docker: &config.DockerEvent{
+			Name:   ".*",
+			Image:  "[invalid",
+			Labels: map[string]string{},
+		},
+	}
+
+	err := event.Validate(zap.NewNop())
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing closing ]")
+}
+
+func TestJobEvent_Validate_DockerInvalidLabelPattern(t *testing.T) {
+	event := config.JobEvent{
+		Docker: &config.DockerEvent{
+			Name:  ".*",
+			Image: ".*",
+			Labels: map[string]string{
+				"service": "(broken",
+			},
+		},
+	}
+
+	err := event.Validate(zap.NewNop())
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "missing closing )")
+}

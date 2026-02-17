@@ -74,14 +74,9 @@ func (d *DockerCreateConnection) Prepare(ctx context.Context, task *config.Task)
 		[]string{shell},
 		shellArgs...,
 	)
-	volumes := make(map[string]struct{})
-	for _, volume := range d.conn.Volumes {
-		parts := utils.EscapedSplit(volume, ':')
-		if len(parts) < 2 {
-			return fmt.Errorf("invalid docker volume format: %q", volume)
-		}
-		inContainer := parts[1]
-		volumes[inContainer] = struct{}{}
+	volumes, err := parseContainerVolumes(d.conn.Volumes)
+	if err != nil {
+		return err
 	}
 	// Create an exec configuration
 	d.containerConfig = &container.Config{
@@ -237,4 +232,17 @@ func retryUntilContext(ctx context.Context, delay time.Duration, fn func() error
 			}
 		}
 	}
+}
+
+func parseContainerVolumes(volumes []string) (map[string]struct{}, error) {
+	containerVolumes := make(map[string]struct{}, len(volumes))
+	for _, volume := range volumes {
+		parts := utils.EscapedSplit(volume, ':')
+		if len(parts) < 2 {
+			return nil, fmt.Errorf("invalid docker volume format: %q", volume)
+		}
+		inContainer := parts[1]
+		containerVolumes[inContainer] = struct{}{}
+	}
+	return containerVolumes, nil
 }
