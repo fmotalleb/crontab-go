@@ -90,12 +90,11 @@ func TestList(t *testing.T) {
 }
 
 func TestEscapedSplit(t *testing.T) {
-	t.Run("Panic when last rune is escape rune '\\'",
+	t.Run("Trailing escape rune is preserved",
 		func(t *testing.T) {
 			str := "must-panic\\"
-			assert.Panics(t, func() {
-				utils.EscapedSplit(str, '-')
-			})
+			result := utils.EscapedSplit(str, '-')
+			assert.Equal(t, []string{"must", "panic\\"}, result)
 		},
 	)
 	t.Run("Normal input returns slice with single item (whole input)",

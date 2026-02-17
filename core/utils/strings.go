@@ -34,7 +34,11 @@ func EscapedSplit(s string, sep rune) []string {
 		result = append(result, string(buffer))
 	}
 	if escaped {
-		panic("escaped character at the end of string")
+		if len(result) == 0 {
+			result = append(result, string(escapedCharacter))
+		} else {
+			result[len(result)-1] += string(escapedCharacter)
+		}
 	}
 	return result
 }

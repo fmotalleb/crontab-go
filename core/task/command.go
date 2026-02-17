@@ -4,6 +4,7 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -79,6 +80,9 @@ func (c Command) Do(ctx context.Context) (e error) {
 			zap.Any("is-local", conn.Local),
 		)
 		connection := connection.Get(&conn, l)
+		if connection == nil {
+			return fmt.Errorf("failed to resolve command connection for %+v", conn)
+		}
 		cmdCtx, cancel := c.ApplyTimeout(ctx)
 		c.SetCancel(cancel)
 

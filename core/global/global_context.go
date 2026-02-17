@@ -54,8 +54,14 @@ func newGlobalContext() *Context {
 func (c *Context) EventListeners() EventListenerMap {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	listeners := c.Value(ctxutils.EventListeners)
-	return listeners.(EventListenerMap)
+	listeners := c.Value(ctxutils.EventListeners).(EventListenerMap)
+	copyMap := make(EventListenerMap, len(listeners))
+	for key, ls := range listeners {
+		clone := make([]func(map[string]any), len(ls))
+		copy(clone, ls)
+		copyMap[key] = clone
+	}
+	return copyMap
 }
 
 func (c *Context) AddEventListener(event string, listener func(map[string]any)) {
@@ -63,7 +69,6 @@ func (c *Context) AddEventListener(event string, listener func(map[string]any)) 
 	defer c.mu.Unlock()
 	listeners := c.Value(ctxutils.EventListeners).(EventListenerMap)
 	listeners[event] = append(listeners[event], listener)
-	c.Context = context.WithValue(c.Context, ctxutils.EventListeners, listeners)
 }
 
 func getTypename[T any](item T) string {

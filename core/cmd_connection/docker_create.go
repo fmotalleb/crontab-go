@@ -3,7 +3,10 @@ package connection
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -73,7 +76,11 @@ func (d *DockerCreateConnection) Prepare(ctx context.Context, task *config.Task)
 	)
 	volumes := make(map[string]struct{})
 	for _, volume := range d.conn.Volumes {
-		inContainer := utils.EscapedSplit(volume, ':')[1]
+		parts := utils.EscapedSplit(volume, ':')
+		if len(parts) < 2 {
+			return fmt.Errorf("invalid docker volume format: %q", volume)
+		}
+		inContainer := parts[1]
 		volumes[inContainer] = struct{}{}
 	}
 	// Create an exec configuration
@@ -152,30 +159,29 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 		"cannot remove the container",
 	)
 
-	for {
-		err = d.cli.ContainerStart(
+	err = retryUntilContext(ctx, 200*time.Millisecond, func() error {
+		return d.cli.ContainerStart(
 			ctx,
 			exec.ID,
 			container.StartOptions{},
 		)
-
-		if err == nil {
-			break
-		}
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	d.log.Debug("container started", zap.Any("container", exec))
 
-	for {
-		_, err = d.cli.ContainerStats(
+	err = retryUntilContext(ctx, 200*time.Millisecond, func() error {
+		_, statsErr := d.cli.ContainerStats(
 			ctx,
 			exec.ID,
 			false,
 		)
-
-		if err == nil {
-			break
-		}
+		return statsErr
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	d.log.Debug("container started", zap.Any("container", exec))
@@ -217,4 +223,18 @@ func (d *DockerCreateConnection) Execute() ([]byte, error) {
 // - An error if the disconnection fails, otherwise nil.
 func (d *DockerCreateConnection) Disconnect() error {
 	return d.cli.Close()
+}
+
+func retryUntilContext(ctx context.Context, delay time.Duration, fn func() error) error {
+	for {
+		if err := fn(); err == nil {
+			return nil
+		} else {
+			select {
+			case <-ctx.Done():
+				return errors.Join(ctx.Err(), err)
+			case <-time.After(delay):
+			}
+		}
+	}
 }

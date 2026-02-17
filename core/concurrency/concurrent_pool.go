@@ -14,7 +14,7 @@ type ConcurrentPool struct {
 	lockerLock sync.Locker
 	available  uint                           // total capacity of the pool
 	used       *concurrency.LockedValue[uint] // number of slots currently in use
-	changeChan chan interface{}               // channel for signaling changes in the pool's state
+	changeChan chan struct{}                  // channel for signaling changes in the pool's state
 }
 
 // NewConcurrentPool creates a new ConcurrentPool with the specified capacity.
@@ -27,7 +27,7 @@ func NewConcurrentPool(capacity uint) (*ConcurrentPool, error) {
 		lockerLock: new(sync.Mutex),
 		available:  capacity,
 		used:       concurrency.NewLockedValue[uint](0),
-		changeChan: make(chan interface{}),
+		changeChan: make(chan struct{}, 1),
 	}, nil
 }
 
@@ -55,7 +55,10 @@ func (p *ConcurrentPool) Unlock() {
 		panic(errors.New("unlock called on a totally free pool"))
 	}
 	p.decrease()
-	go func() { p.changeChan <- false }()
+	select {
+	case p.changeChan <- struct{}{}:
+	default:
+	}
 }
 
 func (p *ConcurrentPool) get() uint {

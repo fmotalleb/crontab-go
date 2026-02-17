@@ -2,6 +2,7 @@ package task
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -93,7 +94,12 @@ func (g *Get) Do(ctx context.Context) (e error) {
 			log.Debug("fetched data", zap.String("response", ans), zap.Error(respErr))
 		}
 	}
-	if err != nil || (res != nil && res.StatusCode >= 400) {
+	if err != nil {
+		log.Warn("request failed", zap.Error(err))
+		return err
+	}
+	if res != nil && res.StatusCode >= 400 {
+		err = fmt.Errorf("unexpected http status code: %d", res.StatusCode)
 		log.Warn("request failed", zap.Error(err))
 		return err
 	}
