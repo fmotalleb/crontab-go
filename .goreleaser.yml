@@ -27,6 +27,7 @@ builds:
       - linux
     goarch:
       - amd64
+      - arm64
     ldflags: 
       - -s
       - -w
@@ -54,35 +55,51 @@ builds:
     binary: crontab-go
     skip: "archive"
 
-dockers:
-  - image_templates:
-      - "ghcr.io/fmotalleb/crontab-go:{{ .Version }}-static"
-      - "ghcr.io/fmotalleb/crontab-go:latest-static"
-    dockerfile: Dockerfile
-    goos: linux
-    goarch: amd64
-    ids:
-      - static
-    build_flag_templates:
-      - "--target=static"
-    use: buildx
-
-  - image_templates:
-      - "ghcr.io/fmotalleb/crontab-go:{{ .Version }}-slim"
-      - "ghcr.io/fmotalleb/crontab-go:latest-slim"
-    dockerfile: Dockerfile
-    goos: linux
-    goarch: amd64
+dockers_v2:
+  - id: slim
+    sbom: false
+    platforms:
+      - linux/amd64
+      - darwin/amd64
+      - darwin/arm64
+    images:
+      - ghcr.io/fmotalleb/crontab-go
+    tags:
+      - "{{ .Version }}"
+      - latest
+    labels:
+      "org.opencontainers.image.description": "Crontab-go"
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.name": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "{{.GitURL}}"
     ids:
       - slim
-    build_flag_templates:
-      - "--target=slim"
-    use: buildx
+    flags:
+      - --target=slim
 
-archives:
-  - id: default
-    builds:
-      - default
+  - id: distroless
+    sbom: false
+    platforms:
+      - linux/amd64
+    images:
+      - ghcr.io/fmotalleb/crontab-go
+    tags:
+      - "{{ .Version }}-distroless"
+      - latest-distroless
+    labels:
+      "org.opencontainers.image.description": "Crontab-go"
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.name": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "{{.GitURL}}"
+    ids:
+      - static
+    flags:
+      - --target=distroless
+
 
 release:
   github:
