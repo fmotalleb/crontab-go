@@ -42,7 +42,7 @@ builds:
     skip: "archive"
 
 archives:
-  - builds:
+  - ids:
       - default
 
 dockers_v2:
