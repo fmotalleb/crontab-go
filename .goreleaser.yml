@@ -22,26 +22,12 @@ builds:
       - "-X github.com/fmotalleb/go-tools/git.Date={{.Date}}"
       - "-X github.com/fmotalleb/go-tools/git.Branch={{.Branch}}"
 
-  - id: slim
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm64
-    ldflags: 
-      - -s
-      - -w
-      - "-X github.com/fmotalleb/go-tools/git.Version={{.Version}}"
-      - "-X github.com/fmotalleb/go-tools/git.Commit={{.ShortCommit}}"
-      - "-X github.com/fmotalleb/go-tools/git.Date={{.Date}}"
-      - "-X github.com/fmotalleb/go-tools/git.Branch={{.Branch}}"
-    binary: crontab-go
-    skip: "archive"
   - id: static
     goos:
       - linux
     goarch:
       - amd64
+      - arm64
     env:
       - CGO_ENABLED=0
     ldflags: 
@@ -75,7 +61,7 @@ dockers_v2:
       "org.opencontainers.image.version": "{{.Version}}"
       "org.opencontainers.image.source": "{{.GitURL}}"
     ids:
-      - slim
+      - static
     flags:
       - --target=slim
 
