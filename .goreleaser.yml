@@ -11,6 +11,9 @@ builds:
       - darwin
       - linux
       - windows
+    goarch:
+      - amd64
+      - arm64
     ldflags: 
       - -s
       - -w
@@ -18,8 +21,6 @@ builds:
       - "-X github.com/fmotalleb/go-tools/git.Commit={{.ShortCommit}}"
       - "-X github.com/fmotalleb/go-tools/git.Date={{.Date}}"
       - "-X github.com/fmotalleb/go-tools/git.Branch={{.Branch}}"
-    goarch:
-      - amd64
 
   - id: slim
     goos:
