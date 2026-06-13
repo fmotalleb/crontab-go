@@ -35,7 +35,7 @@ CMD ["-c","/config.yaml"]
 # ──────────────────────────────────────────────────────────────────────────────
 # Output debian static distroless: does not have a shell, you are able to use GET,POST tasks
 # But you are able to attach to docker instance and execute commands there
-FROM gcr.io/distroless/static-debian12:latest-amd64 AS static
+FROM gcr.io/distroless/static-debian13:latest-amd64 AS distroless
 
 COPY crontab-go /crontab-go
 
