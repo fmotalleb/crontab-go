@@ -13,7 +13,8 @@
 # Output debian slim version: has a shell to execute commands and can be extended
 FROM debian:trixie-slim AS slim
 
-COPY crontab-go /bin/crontab-go
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/crontab-go /bin/crontab-go
 
 ENV LOG_TIMESTAMP_FORMAT="2006-01-02T15:04:05.000Z"
 ENV LOG_FORMAT="ansi"
@@ -37,7 +38,8 @@ CMD ["-c","/config.yaml"]
 # But you are able to attach to docker instance and execute commands there
 FROM gcr.io/distroless/static-debian13:latest-amd64 AS distroless
 
-COPY crontab-go /crontab-go
+ARG TARGETPLATFORM
+COPY $TARGETPLATFORM/crontab-go /crontab-go
 
 ENV LOG_TIMESTAMP_FORMAT="2006-01-02T15:04:05.000Z"
 ENV LOG_FORMAT="ansi"
