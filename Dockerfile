@@ -11,7 +11,7 @@
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Output debian slim version: has a shell to execute commands and can be extended
-FROM debian:trixie-slim AS slim
+FROM --platform=$BUILDPLATFORM debian:trixie-slim AS slim
 
 ARG TARGETPLATFORM
 COPY $TARGETPLATFORM/crontab-go /bin/crontab-go
