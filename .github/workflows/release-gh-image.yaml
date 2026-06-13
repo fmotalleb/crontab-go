@@ -41,7 +41,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
       - name: Build and push Docker image Slim
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -51,7 +51,7 @@ jobs:
           target: "slim"
           labels: ${{ steps.meta.outputs.labels }}
       - name: Build and push Docker image Static (distroless)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
