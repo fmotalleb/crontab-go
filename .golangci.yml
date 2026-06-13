@@ -38,6 +38,17 @@ linters:
     - usetesting
     - whitespace
   settings:
+    goconst:
+      match-constant: true
+      min-len: 5
+      min-occurrences: 4
+      ignore-calls: true
+      numbers: false
+      min: 3
+      max: 3
+      find-duplicates: false
+      eval-const-expressions: false
+      ignore-tests: true
     funlen:
       lines: 100
       statements: 50
