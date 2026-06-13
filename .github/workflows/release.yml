@@ -24,7 +24,15 @@ jobs:
         with:
           go-version: "1.26"
           check-latest: true
-
+      - name: Set up Docker Engine
+        uses: docker/setup-docker-action@v4
+        with:
+          daemon-config: |
+            {
+              "features": {
+                "containerd-snapshotter": true
+              }
+            }
       - name: Login to GitHub Container Registry
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
