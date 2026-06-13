@@ -50,8 +50,7 @@ dockers_v2:
     sbom: false
     platforms:
       - linux/amd64
-      - darwin/amd64
-      - darwin/arm64
+      - linux/arm64
     images:
       - ghcr.io/fmotalleb/crontab-go
     tags:
