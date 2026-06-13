@@ -41,6 +41,10 @@ builds:
     binary: crontab-go
     skip: "archive"
 
+archives:
+  - builds:
+      - default
+
 dockers_v2:
   - id: slim
     sbom: false
