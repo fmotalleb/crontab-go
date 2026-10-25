@@ -150,7 +150,9 @@ func (d *DockerCreateConnection) Execute(stdout, stderr io.Writer) error {
 	defer helpers.WarnOnErrIgnored(
 		d.log,
 		func() error {
-			return d.cli.ContainerRemove(ctx, exec.ID,
+			cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+			defer cancel()
+			return d.cli.ContainerRemove(cleanupCtx, exec.ID,
 				container.RemoveOptions{
 					Force: true,
 				},

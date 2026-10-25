@@ -104,7 +104,11 @@ func NewLogFile(filePath, matcherStr string, checkCycle time.Duration, logger *z
 // the beginning when truncation is detected. File errors are handled internally;
 // polling continues without returning them to the caller.
 func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
-	ctx, cancel := context.WithCancel(global.CTX())
+	lf.buildTickChannel(global.CTX(), ed)
+}
+
+func (lf *LogFile) buildTickChannel(parent context.Context, ed abstraction.EventDispatcher) {
+	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	var (
 		file     *os.File
@@ -122,6 +126,7 @@ func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 		}
 	}()
 
+	file, reader, fileInfo, offset = lf.openFile(true)
 	ticker := time.NewTicker(lf.checkCycle)
 	defer ticker.Stop()
 
@@ -139,7 +144,7 @@ func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 			}
 			switch {
 			case file == nil:
-				file, reader, fileInfo, offset = lf.openFile(true)
+				file, reader, fileInfo, offset = lf.openFile(false)
 				if file == nil {
 					continue
 				}

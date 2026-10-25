@@ -33,8 +33,6 @@ type WebServer struct {
 	serveMetrics bool
 }
 
-const maxConcurrentEventRequests = 64
-
 func NewWebServer(ctx context.Context,
 	address string,
 	port uint,
@@ -104,20 +102,8 @@ func (s *WebServer) newEngine() *echo.Echo {
 		middleware.Recover(),
 	)
 
-	ed := &endpoint.EventDispatchEndpoint{}
-	dispatchSlots := make(chan struct{}, maxConcurrentEventRequests)
-	engine.POST(
-		"/events/:event/emit",
-		func(c echo.Context) error {
-			select {
-			case dispatchSlots <- struct{}{}:
-				defer func() { <-dispatchSlots }()
-				return ed.Endpoint(c)
-			default:
-				return c.String(http.StatusTooManyRequests, "too many event dispatch requests")
-			}
-		},
-	)
+	ed := endpoint.NewEventDispatchEndpoint()
+	engine.POST("/events/:event/emit", ed.Endpoint)
 	if s.serveMetrics {
 		engine.GET("/metrics", func(c echo.Context) error {
 			promhttp.Handler().ServeHTTP(c.Response().Writer, c.Request())
