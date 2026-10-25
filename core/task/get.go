@@ -31,7 +31,7 @@ func NewGet(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool
 		task:    task,
 		headers: &task.Headers,
 		log: logger.With(
-			zap.String("url", task.Get),
+			zap.String("url", redactedURL(task.Get)),
 			zap.String("method", "get"),
 		),
 	}
@@ -59,7 +59,7 @@ func (g *Get) Do(ctx context.Context) (e error) {
 	_, span := taskTracer.Start(
 		ctx, "http.get",
 		trace.WithAttributes(
-			attribute.String("url.full", g.address),
+			attribute.String("url.full", redactedURL(g.address)),
 			attribute.String("http.request.method", "GET"),
 			attribute.String("execution.id", execID),
 			attribute.Bool("tls.insecure_skip_verify", g.task.Insecure),
@@ -93,7 +93,8 @@ func (g *Get) Do(ctx context.Context) (e error) {
 
 	localCtx, cancel := g.ApplyTimeout(ctx)
 	defer cancel()
-	g.SetCancel(cancel)
+	unregisterCancel := g.RegisterCancel(cancel)
+	defer unregisterCancel()
 
 	g.setURLAttrs(span)
 	g.setRetryAttrs(span)

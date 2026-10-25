@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"sync"
 
 	"go.uber.org/zap"
 
@@ -12,12 +14,42 @@ import (
 )
 
 // newHTTPClient builds an http.Client, optionally skipping TLS certificate verification.
+var (
+	httpClientsOnce sync.Once
+	verifiedClient  *http.Client
+	insecureClient  *http.Client
+)
+
 func newHTTPClient(insecure bool) *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	httpClientsOnce.Do(func() {
+		verifiedTransport := http.DefaultTransport.(*http.Transport).Clone()
+		insecureTransport := verifiedTransport.Clone()
+		insecureTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // explicit user opt-in
+		verifiedClient = &http.Client{Transport: verifiedTransport}
+		insecureClient = &http.Client{Transport: insecureTransport}
+	})
 	if insecure {
-		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // explicit user opt-in
+		return insecureClient
 	}
-	return &http.Client{Transport: transport}
+	return verifiedClient
+}
+
+// CloseHTTPIdleConnections releases pooled connections during application shutdown.
+func CloseHTTPIdleConnections() {
+	if verifiedClient != nil {
+		verifiedClient.CloseIdleConnections()
+	}
+	if insecureClient != nil {
+		insecureClient.CloseIdleConnections()
+	}
+}
+
+func redactedURL(address string) string {
+	parsed, err := url.Parse(address)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return "<invalid-url>"
+	}
+	return parsed.Scheme + "://" + parsed.Host
 }
 
 // doHTTP sends the request, streams the response body to out, and returns the HTTP status code and any error.

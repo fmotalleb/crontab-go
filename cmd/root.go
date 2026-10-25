@@ -3,8 +3,10 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/fmotalleb/go-tools/defaulter"
 	"github.com/fmotalleb/go-tools/env"
@@ -21,6 +23,7 @@ import (
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/global"
 	"github.com/fmotalleb/crontab-go/core/jobs"
+	coretask "github.com/fmotalleb/crontab-go/core/task"
 	"github.com/fmotalleb/crontab-go/core/webserver"
 )
 
@@ -43,8 +46,10 @@ within your containerized applications.`,
 			log.SetDebugDefaults()
 		}
 	},
-	Run: func(_ *cobra.Command, _ []string) {
-		initConfig()
+	RunE: func(_ *cobra.Command, _ []string) error {
+		if err := initConfig(); err != nil {
+			return err
+		}
 		cronInstance := cron.New(cron.WithSeconds())
 		global.Put(cronInstance)
 		cronInstance.Start()
@@ -64,23 +69,52 @@ within your containerized applications.`,
 		}
 		defer otelResult.Shutdown(context.Background()) //nolint:errcheck // shutdown is best-effort
 
-		jobs.InitializeJobs(CFG.Jobs)
+		if err := jobs.InitializeJobs(CFG.Jobs, CFG.Variables); err != nil {
+			return err
+		}
+		var webServerErrors chan error
 		if CFG.WebServerAddress != "" {
-			go webserver.
-				NewWebServer(
+			webServerErrors = make(chan error, 1)
+			go func() {
+				webServerErrors <- webserver.NewWebServer(
 					global.CTX(),
 					CFG.WebServerAddress,
 					CFG.WebServerPort,
 
 					CFG.WebServerMetrics,
 					&webserver.AuthConfig{
-						Username: CFG.WebserverUsername,
-						Password: CFG.WebServerPassword,
+						Username:             CFG.WebserverUsername,
+						Password:             CFG.WebServerPassword,
+						AllowUnauthenticated: CFG.AllowUnauthenticatedWebserver,
 					},
-				).
-				Serve()
+				).Serve()
+			}()
 		}
-		<-global.CTX().Done()
+		select {
+		case <-global.CTX().Done():
+		case err := <-webServerErrors:
+			if err != nil {
+				return err
+			}
+			if global.CTX().Err() == nil {
+				return errors.New("webserver stopped unexpectedly")
+			}
+		}
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		select {
+		case <-cronInstance.Stop().Done():
+			l.Info("cron stopped")
+		case <-shutdownCtx.Done():
+			l.Warn("timed out waiting for cron jobs to stop")
+		}
+		taskShutdownCtx, taskCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		if err := jobs.WaitForShutdown(taskShutdownCtx); err != nil {
+			l.Warn("timed out waiting for tasks to stop", zap.Error(err))
+		}
+		taskCancel()
+		coretask.CloseHTTPIdleConnections()
+		return nil
 	},
 }
 
@@ -126,13 +160,7 @@ func warnOnErr(err error, message string) {
 	}
 }
 
-func panicOnErr(err error, message string) {
-	if err != nil {
-		panic(fmt.Errorf("%s, %w", message, err))
-	}
-}
-
-func initConfig() {
+func initConfig() error {
 	setupEnv()
 
 	if cfgFile != "" {
@@ -142,19 +170,19 @@ func initConfig() {
 		viper.SetConfigType("yaml")
 	}
 
-	panicOnErr(
-		viper.ReadInConfig(),
-		"Cannot read the config file: %s",
-	)
-	panicOnErr(
-		viper.Unmarshal(CFG),
-		"Cannot unmarshal the config file: %s",
-	)
-	panicOnErr(
-		CFG.Validate(),
-		"Failed to initialize config file: %s",
-	)
-	_ = defaulter.ApplyDefaults(CFG, CFG)
+	if err := viper.ReadInConfig(); err != nil {
+		return fmt.Errorf("cannot read config file: %w", err)
+	}
+	if err := viper.Unmarshal(CFG); err != nil {
+		return fmt.Errorf("cannot unmarshal config file: %w", err)
+	}
+	if err := defaulter.ApplyDefaults(CFG, CFG); err != nil {
+		return fmt.Errorf("cannot apply config defaults: %w", err)
+	}
+	if err := CFG.Validate(); err != nil {
+		return fmt.Errorf("failed to initialize config: %w", err)
+	}
+	return nil
 }
 
 func setupEnv() {
@@ -195,6 +223,14 @@ func setupEnv() {
 			"username",
 		),
 		"Cannot bind webserver_username env variable: %s",
+	)
+	warnOnErr(
+		viper.BindEnv(
+			"webserver_allow_unauthenticated",
+			"WEBSERVER_ALLOW_UNAUTHENTICATED",
+			"ALLOW_UNAUTHENTICATED_WEBSERVER",
+		),
+		"Cannot bind webserver_allow_unauthenticated env variable: %s",
 	)
 
 	viper.AutomaticEnv()

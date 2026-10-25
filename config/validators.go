@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/fmotalleb/go-tools/log"
@@ -17,8 +18,17 @@ func (cfg *Config) Validate() error {
 		return err
 	}
 
-	// Validate each job in the config
-	for _, job := range cfg.Jobs {
+	names := make(map[string]struct{}, len(cfg.Jobs))
+	for i, job := range cfg.Jobs {
+		if job == nil {
+			return fmt.Errorf("job at index %d is null", i)
+		}
+		if job.Name != "" {
+			if _, exists := names[job.Name]; exists {
+				return fmt.Errorf("duplicate job name %q", job.Name)
+			}
+			names[job.Name] = struct{}{}
+		}
 		if err := job.Validate(log); err != nil {
 			return err
 		}
@@ -37,7 +47,18 @@ func validateWebserverConfig(cfg *Config) error {
 	if cfg.WebServerPort == 0 {
 		return fmt.Errorf("address: %s:%d is not a valid address", cfg.WebServerAddress, cfg.WebServerPort)
 	}
-	if len(cfg.WebServerPassword) < 8 {
+	if cfg.WebServerPort > 65535 {
+		return fmt.Errorf("webserver port %d is outside the valid range 1-65535", cfg.WebServerPort)
+	}
+	hasUsername := cfg.WebserverUsername != ""
+	hasPassword := cfg.WebServerPassword != ""
+	if hasUsername != hasPassword {
+		return errors.New("webserver username and password must be configured together")
+	}
+	if !hasUsername && !cfg.AllowUnauthenticatedWebserver {
+		return errors.New("webserver authentication is required; set webserver_allow_unauthenticated=true only on a trusted network")
+	}
+	if hasPassword && len(cfg.WebServerPassword) < 8 {
 		log.Warn(
 			"webserver password is weak",
 		)

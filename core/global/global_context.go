@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"reflect"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/fmotalleb/go-tools/log"
@@ -41,7 +42,7 @@ func newGlobalContext() *Context {
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize logger: %w", err))
 	}
-	ctx, _ = signal.NotifyContext(ctx, os.Interrupt, os.Kill)
+	ctx, _ = signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	ctx = context.WithValue(
 		ctx,
 		ctxutils.EventListeners,
@@ -88,8 +89,12 @@ func (c *Context) Deadline() (time.Time, bool) {
 func (c *Context) EventListeners() EventListenerMap {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	listeners := c.Context.Value(ctxutils.EventListeners)
-	return listeners.(EventListenerMap)
+	registered := c.Context.Value(ctxutils.EventListeners).(EventListenerMap)
+	listeners := make(EventListenerMap, len(registered))
+	for event, handlers := range registered {
+		listeners[event] = append(make([]func(map[string]any), 0, len(handlers)), handlers...)
+	}
+	return listeners
 }
 
 func (c *Context) AddEventListener(event string, listener func(map[string]any)) {

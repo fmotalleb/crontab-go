@@ -31,6 +31,15 @@
 # A command's stdout and stderr are both piped into that single stream, and the same
 # id is reported in the task's start and finish log messages for correlation.
 
+# Optional HTTP server settings. Authentication is required when enabled unless
+# webserver_allow_unauthenticated is explicitly enabled on a trusted network.
+# webserver_address: "127.0.0.1"
+# webserver_port: 8080
+# webserver_username: "scheduler"
+# webserver_password: "replace-with-a-secret"
+# webserver_metrics: false
+# webserver_allow_unauthenticated: false
+
 jobs:
   # Jobs can be assigned a unique name, which will be included in log messages for easier debugging.
   - name: Test Job
@@ -50,6 +59,7 @@ jobs:
         retry-delay: 1s
         # This sets a maximum time limit for the task to complete.
         # If the task exceeds 15 seconds, it will be considered failed and stopped (command) or canceled (http requests)
+        # When omitted, there is no per-task timeout; application shutdown still cancels active work.
         timeout: 15s
         user: root
         # This defines the working directory for the command.

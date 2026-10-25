@@ -3,10 +3,8 @@
 package parser
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/fmotalleb/go-tools/log"
@@ -54,13 +52,7 @@ func run(cmd *cobra.Command, _ []string) {
 }
 
 func writeOutput(log *zap.Logger, cfg *parserConfig, result string) {
-	outputFile, err := os.OpenFile(cfg.output, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		log.Panic("failed to open output file", zap.Error(err))
-	}
-	buf := bytes.NewBufferString(result)
-	_, err = io.Copy(outputFile, buf)
-	if err != nil {
+	if err := os.WriteFile(cfg.output, []byte(result), 0o644); err != nil {
 		log.Panic("failed to write output file", zap.Error(err))
 	}
 }
@@ -69,16 +61,7 @@ func readInCron(cfg *parserConfig) (*CronString, error) {
 	if cfg.cronFile == "" {
 		return nil, errors.New("please provide a cron file path, usage: `--help`")
 	}
-	file, err := os.OpenFile(cfg.cronFile, os.O_RDONLY, 0o644)
-	if err != nil {
-		return nil, fmt.Errorf("can't open cron file: %w", err)
-	}
-	stat, err := file.Stat()
-	if err != nil {
-		return nil, fmt.Errorf("can't stat cron file: %w", err)
-	}
-	content := make([]byte, stat.Size())
-	_, err = file.Read(content)
+	content, err := os.ReadFile(cfg.cronFile)
 	if err != nil {
 		return nil, fmt.Errorf("can't open cron file: %w", err)
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
@@ -78,7 +79,6 @@ func (d *DockerAttachConnection) Prepare(ctx context.Context, task *config.Task)
 		Env:          environments,
 		WorkingDir:   task.WorkingDirectory,
 		User:         task.UserName,
-		Detach:       false,
 		Cmd:          cmd,
 	}
 	return nil
@@ -156,7 +156,30 @@ func (d *DockerAttachConnection) Execute(stdout, stderr io.Writer) error {
 		d.log.Debug("copy of std is failed", zap.Int64("until-err", wrote), zap.Error(err))
 		return err
 	}
-	return nil
+	inspect, err := waitForExec(d.ctx, d.cli, exec.ID)
+	if err != nil {
+		return err
+	}
+	return checkDockerExitStatus("docker exec "+exec.ID, int64(inspect.ExitCode))
+}
+
+func waitForExec(ctx context.Context, cli *client.Client, execID string) (container.ExecInspect, error) {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		inspect, err := cli.ContainerExecInspect(ctx, execID)
+		if err != nil {
+			return container.ExecInspect{}, fmt.Errorf("inspect docker exec %s: %w", execID, err)
+		}
+		if !inspect.Running {
+			return inspect, nil
+		}
+		select {
+		case <-ctx.Done():
+			return container.ExecInspect{}, ctx.Err()
+		case <-ticker.C:
+		}
+	}
 }
 
 // Disconnect closes the connection to the Docker daemon.

@@ -2,6 +2,7 @@ package connection
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 
@@ -168,27 +169,35 @@ func (d *DockerCreateConnection) Execute(stdout, stderr io.Writer) error {
 			return ctx.Err()
 		}
 		d.log.Warn("container start failed, retrying", zap.Error(err))
-		time.Sleep(time.Second)
+		timer := time.NewTimer(time.Second)
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		}
 	}
 
 	d.log.Debug("container started", zap.Any("container", exec))
 
-	for {
-		_, err = d.cli.ContainerStats(
-			ctx,
-			exec.ID,
-			false,
-		)
-		if err == nil {
-			break
+	waitResult, waitErrors := d.cli.ContainerWait(ctx, exec.ID, container.WaitConditionNotRunning)
+	var result container.WaitResponse
+	select {
+	case waitErr := <-waitErrors:
+		if waitErr != nil {
+			return fmt.Errorf("wait for container %s: %w", exec.ID, waitErr)
 		}
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		d.log.Warn("container stats failed, retrying", zap.Error(err))
-		time.Sleep(time.Second)
+		return fmt.Errorf("wait for container %s returned without a result", exec.ID)
+	case result = <-waitResult:
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	// Attach to the exec instance
+	if result.Error != nil {
+		return fmt.Errorf("container %s failed: %s", exec.ID, result.Error.Message)
+	}
+
+	// Read the completed container's logs so fast commands cannot finish before
+	// output collection begins.
 	resp, err := d.cli.ContainerLogs(
 		ctx,
 		exec.ID,
@@ -217,7 +226,7 @@ func (d *DockerCreateConnection) Execute(stdout, stderr io.Writer) error {
 		d.log.Debug("copy of std is failed", zap.Int64("until-err", wrote), zap.Error(err))
 		return err
 	}
-	return nil
+	return checkDockerExitStatus("container "+exec.ID, result.StatusCode)
 }
 
 // Disconnect closes the connection to the Docker daemon.

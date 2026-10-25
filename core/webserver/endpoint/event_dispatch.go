@@ -30,7 +30,7 @@ func (ed *EventDispatchEndpoint) Endpoint(c echo.Context) error {
 	}
 	listenerCount := len(listeners)
 	for _, listener := range listeners {
-		go listener(metaData)
+		listener(metaData)
 	}
 	return c.String(http.StatusOK, fmt.Sprintf("event: '%s' emitted, %d listeners where found", e, listenerCount))
 }

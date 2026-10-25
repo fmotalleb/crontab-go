@@ -12,8 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 
-	"github.com/fmotalleb/go-tools/concurrency"
-
 	"github.com/fmotalleb/crontab-go/abstraction"
 	"github.com/fmotalleb/crontab-go/config"
 	"github.com/fmotalleb/crontab-go/core/global"
@@ -116,7 +114,7 @@ func (dockerEvent *DockerEvent) connectAndListen(ed abstraction.EventDispatcher)
 	)
 	if err != nil {
 		dockerEvent.log.Warn("failed to connect to docker", zap.Error(err))
-		return dockerEvent.shouldReconnect()
+		return dockerEvent.shouldReconnect(global.CTX())
 	}
 	defer cli.Close()
 
@@ -124,44 +122,28 @@ func (dockerEvent *DockerEvent) connectAndListen(ed abstraction.EventDispatcher)
 	defer cancel()
 
 	msg, errs := cli.Events(ctx, events.ListOptions{})
-	errCount := concurrency.NewLockedValue(uint(0))
+	var errorCount uint
 
 	for {
 		select {
-		case err := <-errs:
-			if err == nil {
-				continue
+		case err, ok := <-errs:
+			if !ok {
+				dockerEvent.log.Warn("docker error stream closed; reconnecting")
+				return dockerEvent.shouldReconnect(ctx)
+			}
+			action := dockerEvent.handleStreamError(ctx, &errorCount, err)
+			switch action {
+			case dockerReconnect:
+				return dockerEvent.shouldReconnect(ctx)
+			case dockerStop:
+				return false
 			}
 
-			dockerEvent.log.Warn("received an error from docker", zap.Error(err))
-			if dockerEvent.errorThreshold == 0 {
-				continue
+		case event, ok := <-msg:
+			if !ok {
+				dockerEvent.log.Warn("docker event stream closed; reconnecting")
+				return dockerEvent.shouldReconnect(ctx)
 			}
-
-			count := errCount.Get() + 1
-			errCount.Set(count)
-
-			if count >= dockerEvent.errorThreshold {
-				switch dockerEvent.errorPolicy {
-				case config.ErrorPolGiveUp:
-					dockerEvent.log.Error("consecutive errors from docker, giving up", zap.Uint("errors", count))
-					return false
-				case config.ErrorPolKill:
-					dockerEvent.log.Fatal("consecutive errors from docker, killing instance", zap.Uint("errors", count))
-				case config.ErrorPolReconnect:
-					dockerEvent.log.Warn("consecutive errors from docker, reconnecting", zap.Uint("errors", count))
-					return true
-				default:
-					dockerEvent.log.Fatal("unexpected ErrorLimitPolicy", zap.Any("policy", dockerEvent.errorPolicy))
-				}
-				errCount.Set(0)
-			}
-
-			if dockerEvent.errorThrottle > 0 {
-				time.Sleep(dockerEvent.errorThrottle)
-			}
-
-		case event := <-msg:
 			dockerEvent.log.Debug("received an event from docker", zap.Any("event", event))
 			if dockerEvent.matches(&event) {
 				meta := NewMetaData("docker", map[string]any{
@@ -177,10 +159,54 @@ func (dockerEvent *DockerEvent) connectAndListen(ed abstraction.EventDispatcher)
 					dockerEvent.metricLabels,
 				)
 			}
-			errCount.Set(0)
+			errorCount = 0
 		case <-ctx.Done():
 			return false
 		}
+	}
+}
+
+type dockerStreamAction uint8
+
+const (
+	dockerKeepListening dockerStreamAction = iota
+	dockerReconnect
+	dockerStop
+)
+
+func (d *DockerEvent) handleStreamError(ctx context.Context, count *uint, err error) dockerStreamAction {
+	if err == nil {
+		return dockerKeepListening
+	}
+	d.log.Warn("received an error from docker", zap.Error(err))
+	if d.errorThreshold == 0 {
+		return dockerKeepListening
+	}
+	*count++
+	if *count >= d.errorThreshold {
+		switch d.errorPolicy {
+		case config.ErrorPolGiveUp:
+			d.log.Error("consecutive errors from docker, giving up", zap.Uint("errors", *count))
+			return dockerStop
+		case config.ErrorPolKill:
+			d.log.Fatal("consecutive errors from docker, killing instance", zap.Uint("errors", *count))
+		case config.ErrorPolReconnect:
+			d.log.Warn("consecutive errors from docker, reconnecting", zap.Uint("errors", *count))
+			return dockerReconnect
+		default:
+			d.log.Fatal("unexpected ErrorLimitPolicy", zap.Any("policy", d.errorPolicy))
+		}
+	}
+	if d.errorThrottle <= 0 {
+		return dockerKeepListening
+	}
+	timer := time.NewTimer(d.errorThrottle)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return dockerKeepListening
+	case <-ctx.Done():
+		return dockerStop
 	}
 }
 
@@ -204,12 +230,21 @@ func (dockerEvent *DockerEvent) matches(msg *events.Message) bool {
 	return true
 }
 
-func (dockerEvent *DockerEvent) shouldReconnect() bool {
+func (dockerEvent *DockerEvent) shouldReconnect(ctx context.Context) bool {
 	switch dockerEvent.errorPolicy {
 	case config.ErrorPolReconnect:
 		dockerEvent.log.Warn("retrying docker connection after failure")
-		time.Sleep(dockerEvent.errorThrottle)
-		return true
+		if dockerEvent.errorThrottle <= 0 {
+			return ctx.Err() == nil
+		}
+		timer := time.NewTimer(dockerEvent.errorThrottle)
+		defer timer.Stop()
+		select {
+		case <-timer.C:
+			return ctx.Err() == nil
+		case <-ctx.Done():
+			return false
+		}
 	case config.ErrorPolGiveUp:
 		dockerEvent.log.Error("giving up on docker connection")
 		return false

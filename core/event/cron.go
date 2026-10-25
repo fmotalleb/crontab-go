@@ -59,23 +59,25 @@ func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 	if c.entry != nil {
 		c.logger.Fatal("already built the ticker channel")
 	}
+	ctx, cancel := context.WithCancel(global.CTX())
+	defer cancel()
 	notifyChan := make(chan abstraction.Event)
 	schedule, err := config.DefaultCronParser.Parse(c.cronSchedule)
 	if err != nil {
 		c.logger.Warn("cannot initialize cron", zap.Error(err))
-	} else {
-		entry := c.cron.Schedule(
-			schedule,
-			&cronJob{
-				logger:    c.logger,
-				scheduler: c.cronSchedule,
-				notify:    notifyChan,
-			},
-		)
-		c.entry = &entry
+		return
 	}
-	ctx, cancel := context.WithCancel(global.CTX())
-	defer cancel()
+	entry := c.cron.Schedule(
+		schedule,
+		&cronJob{
+			ctx:       ctx,
+			logger:    c.logger,
+			scheduler: c.cronSchedule,
+			notify:    notifyChan,
+		},
+	)
+	c.entry = &entry
+	defer c.cron.Remove(entry)
 	for {
 		select {
 		case e := <-notifyChan:
@@ -92,6 +94,7 @@ func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 }
 
 type cronJob struct {
+	ctx       context.Context
 	logger    *zap.Logger
 	scheduler string
 	notify    chan<- abstraction.Event
@@ -99,10 +102,13 @@ type cronJob struct {
 
 func (j *cronJob) Run() {
 	j.logger.Debug("cron tick received")
-	j.notify <- NewMetaData(
+	select {
+	case j.notify <- NewMetaData(
 		"cron",
 		map[string]any{
 			"schedule": j.scheduler,
 		},
-	)
+	):
+	case <-j.ctx.Done():
+	}
 }

@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/alecthomas/assert/v2"
 	"go.uber.org/zap"
@@ -57,6 +58,11 @@ func TestJobEvent_Validate_NegativeInterval(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), expectedErr)
+}
+
+func TestJobEvent_Validate_NegativeLogCheckCycle(t *testing.T) {
+	event := config.JobEvent{LogFile: "/tmp/app.log", LogCheckCycle: -time.Second}
+	assert.Error(t, event.Validate(zap.NewNop()))
 }
 
 func TestJobEvent_Validate_InvalidCronExpression(t *testing.T) {

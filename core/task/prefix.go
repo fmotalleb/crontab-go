@@ -127,18 +127,3 @@ func newExecutionID() string {
 	}
 	return hex.EncodeToString(b[:])
 }
-
-// truncate returns s shortened to at most maxLen runes, appending "…" if truncated.
-func truncate(s string, maxLen int) string {
-	// Fast path: byte length is always >= rune count, so if the byte length
-	// already fits, there's no need to scan/allocate a []rune at all. This
-	// covers the common case (short or all-ASCII strings) in O(1).
-	if len(s) <= maxLen {
-		return s
-	}
-	runes := []rune(s)
-	if len(runes) <= maxLen {
-		return s
-	}
-	return string(runes[:maxLen]) + "…"
-}

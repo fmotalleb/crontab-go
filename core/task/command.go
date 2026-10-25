@@ -34,7 +34,7 @@ func NewCommand(
 	}
 	cmd := &Command{
 		log: logger.With(
-			zap.String("command", task.Command),
+			zap.String("command.hash", shortHash(task.Command)),
 		),
 
 		task: task,
@@ -62,7 +62,6 @@ func (c *Command) Do(ctx context.Context) (e error) {
 		ctx, "task.command",
 		trace.WithAttributes(
 			attribute.String("command.hash", shortHash(c.task.Command)),
-			attribute.String("command.text", truncate(c.task.Command, 128)),
 			attribute.String("execution.id", execID),
 		),
 	)
@@ -85,6 +84,8 @@ func (c *Command) Do(ctx context.Context) (e error) {
 	defer c.recoverPanic(span, &e)
 	localCtx, cancel := c.ApplyTimeout(ctx)
 	defer cancel()
+	unregisterCancel := c.RegisterCancel(cancel)
+	defer unregisterCancel()
 	connections := c.task.Connections
 	if len(connections) == 0 {
 		connections = []config.TaskConnection{{Local: true}}

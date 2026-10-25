@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"strings"
 
@@ -86,7 +87,7 @@ func (s *CronString) parseAsSpec(
 				envTable[key] = val
 			}
 		} else {
-			spec, err := l.exportSpec(matcher, envTable, parser)
+			spec, err := l.exportSpec(matcher, maps.Clone(envTable), parser)
 			if err != nil {
 				return nil, err
 			}
@@ -123,7 +124,7 @@ func buildMapper(hasUser bool, pattern string) (*regexp.Regexp, cronSpecParser, 
 
 	matcher, err := regexp.Compile(cronLineMatcher)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to compile cron line parser regexp: `%s`", matcher)
+		return nil, nil, fmt.Errorf("failed to compile cron line parser regexp %q: %w", cronLineMatcher, err)
 	}
 	parser, err := getLineParser(hasUser, matcher)
 	if err != nil {

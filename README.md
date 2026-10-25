@@ -56,6 +56,10 @@ This section outlines the configuration options available for the application.
 
 Crontab-go supports exporting traces, metrics, and logs to an OTLP-compatible collector (e.g. OpenTelemetry Collector). Each signal is independently configured and optional.
 
+**Web event endpoint:**
+
+When the web server is enabled, configure both `webserver_username` and `webserver_password` for Basic authentication. Unauthenticated access is disabled by default; set `webserver_allow_unauthenticated: true` only when the server is reachable exclusively on a trusted network or behind a TLS proxy. Event triggers accept `POST` requests at `/events/<event-name>/emit`. At most 64 event dispatch requests run concurrently; excess requests receive HTTP 429.
+
 Environment variables:
 
 | Variable | Purpose |

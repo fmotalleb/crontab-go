@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"regexp"
 	"strings"
@@ -61,6 +60,9 @@ type LogFile struct {
 }
 
 func NewLogFile(filePath, matcherStr string, checkCycle time.Duration, logger *zap.Logger) (*LogFile, error) {
+	if checkCycle < 0 {
+		return nil, fmt.Errorf("log check cycle cannot be negative: %s", checkCycle)
+	}
 	matcherStr = cmp.Or(matcherStr, ".")
 	checkCycle = cmp.Or(checkCycle, time.Second)
 
@@ -95,23 +97,21 @@ func NewLogFile(filePath, matcherStr string, checkCycle time.Duration, logger *z
 func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 	ctx, cancel := context.WithCancel(global.CTX())
 	defer cancel()
+	var (
+		file     *os.File
+		reader   *bufio.Reader
+		fileInfo os.FileInfo
+		pending  string
+		offset   int64
+	)
 
-	file, err := os.Open(lf.filePath)
-	if err != nil {
-		lf.logger.Error("failed to open log file", zap.String("path", lf.filePath), zap.Error(err))
-		return
-	}
 	defer func() {
-		if cerr := file.Close(); cerr != nil {
-			lf.logger.Warn("failed to close log file", zap.Error(cerr))
+		if file != nil {
+			if cerr := file.Close(); cerr != nil {
+				lf.logger.Warn("failed to close log file", zap.Error(cerr))
+			}
 		}
 	}()
-
-	reader := bufio.NewReader(file)
-	// Skip existing content
-	if _, err := reader.Discard(math.MaxInt64); err != nil && !errors.Is(err, io.EOF) {
-		lf.logger.Warn("failed to skip initial data", zap.Error(err))
-	}
 
 	ticker := time.NewTicker(lf.checkCycle)
 	defer ticker.Stop()
@@ -121,21 +121,81 @@ func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			lf.processNewLines(ctx, reader, ed)
+			pathInfo, statErr := os.Stat(lf.filePath)
+			if statErr != nil {
+				if !errors.Is(statErr, os.ErrNotExist) {
+					lf.logger.Warn("failed to stat log file", zap.String("path", lf.filePath), zap.Error(statErr))
+				}
+				continue
+			}
+			switch {
+			case file == nil:
+				file, reader, fileInfo, offset = lf.openFile(true)
+				if file == nil {
+					continue
+				}
+			case !os.SameFile(fileInfo, pathInfo):
+				if err := file.Close(); err != nil {
+					lf.logger.Warn("failed to close rotated log file", zap.Error(err))
+				}
+				file, reader, fileInfo, offset = lf.openFile(false)
+				pending = ""
+				if file == nil {
+					continue
+				}
+			case pathInfo.Size() < offset:
+				if _, err := file.Seek(0, io.SeekStart); err != nil {
+					lf.logger.Warn("failed to seek truncated log file", zap.Error(err))
+					continue
+				}
+				reader = bufio.NewReader(file)
+				offset = 0
+				pending = ""
+			}
+			lf.processNewLines(ctx, reader, ed, &pending, &offset)
 		}
 	}
 }
 
-func (lf *LogFile) processNewLines(ctx context.Context, reader *bufio.Reader, ed abstraction.EventDispatcher) {
+func (lf *LogFile) openFile(skipExisting bool) (*os.File, *bufio.Reader, os.FileInfo, int64) {
+	file, err := os.Open(lf.filePath)
+	if err != nil {
+		lf.logger.Warn("failed to open log file", zap.String("path", lf.filePath), zap.Error(err))
+		return nil, nil, nil, 0
+	}
+	info, err := file.Stat()
+	if err != nil {
+		lf.logger.Warn("failed to stat opened log file", zap.Error(err))
+		_ = file.Close()
+		return nil, nil, nil, 0
+	}
+	var offset int64
+	if skipExisting {
+		offset, err = file.Seek(0, io.SeekEnd)
+		if err != nil {
+			lf.logger.Warn("failed to seek to end of log file", zap.Error(err))
+			_ = file.Close()
+			return nil, nil, nil, 0
+		}
+	}
+	return file, bufio.NewReader(file), info, offset
+}
+
+func (lf *LogFile) processNewLines(ctx context.Context, reader *bufio.Reader, ed abstraction.EventDispatcher, pending *string, offset *int64) {
 	for {
 		line, err := reader.ReadString('\n')
 		if err == io.EOF {
+			*pending += line
+			*offset += int64(len(line))
 			break // no new data yet
 		}
 		if err != nil {
 			lf.logger.Error("failed reading log file", zap.Error(err))
 			return
 		}
+		*offset += int64(len(line))
+		line = *pending + line
+		*pending = ""
 		line = strings.TrimRight(line, "\r\n")
 		if line == "" {
 			continue

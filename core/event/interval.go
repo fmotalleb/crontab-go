@@ -58,6 +58,7 @@ func (c *Interval) BuildTickChannel(ed abstraction.EventDispatcher) {
 	}
 
 	c.ticker = time.NewTicker(c.duration)
+	defer c.ticker.Stop()
 	ctx, cancel := context.WithCancel(global.CTX())
 	intervalStr := c.duration.String()
 	defer cancel()

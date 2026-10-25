@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -70,6 +71,15 @@ func (c *JobConfig) Validate(log *zap.Logger) error {
 		log.Warn("job is disabled")
 		return nil
 	}
+	if c.Name == "" {
+		return errors.New("job name must not be empty")
+	}
+	if len(c.Tasks) == 0 {
+		return fmt.Errorf("job %q must define at least one task", c.Name)
+	}
+	if len(c.Events) == 0 {
+		return fmt.Errorf("job %q must define at least one event", c.Name)
+	}
 	checkList := []func(*JobConfig, *zap.Logger) error{
 		validateEvents,
 		validateTasks,
@@ -126,6 +136,9 @@ func validateJobHooks(c *JobConfig, log *zap.Logger) error {
 // It ensures that the event has a valid interval or cron expression, and only one of on_init, interval, or cron is set.
 // It returns an error if the validation fails, otherwise, it returns nil.
 func (s *JobEvent) Validate(log *zap.Logger) error {
+	if s.LogCheckCycle < 0 {
+		return fmt.Errorf("log-check-cycle cannot be negative: %s", s.LogCheckCycle)
+	}
 	// Check if the interval is a negative value
 	if s.Interval < 0 {
 		err := fmt.Errorf("received a negative time in interval: `%v`", s.Interval)

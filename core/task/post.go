@@ -34,7 +34,7 @@ func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, boo
 		data:    &task.Data,
 		task:    task,
 		log: logger.With(
-			zap.String("url", task.Post),
+			zap.String("url", redactedURL(task.Post)),
 			zap.String("method", "post"),
 		),
 	}
@@ -64,7 +64,7 @@ func (p *Post) Do(ctx context.Context) (e error) {
 	_, span := taskTracer.Start(
 		ctx, "http.post",
 		trace.WithAttributes(
-			attribute.String("url.full", p.address),
+			attribute.String("url.full", redactedURL(p.address)),
 			attribute.String("http.request.method", "POST"),
 			attribute.String("execution.id", execID),
 			attribute.Bool("tls.insecure_skip_verify", p.task.Insecure),
@@ -98,7 +98,8 @@ func (p *Post) Do(ctx context.Context) (e error) {
 
 	localCtx, cancel := p.ApplyTimeout(ctx)
 	defer cancel()
-	p.SetCancel(cancel)
+	unregisterCancel := p.RegisterCancel(cancel)
+	defer unregisterCancel()
 
 	p.setURLAttrs(span)
 	p.setRetryAttrs(span)

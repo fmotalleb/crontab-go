@@ -51,3 +51,12 @@ func TestExportEnv_SingleMatch(t *testing.T) {
 		})
 	}
 }
+
+func TestParseAsSpecSnapshotsEnvironmentPerCommand(t *testing.T) {
+	cron := NewCronString("JOB=first\n* * * * * echo {{.JOB}}\nJOB=second\n* * * * * echo {{.JOB}}")
+	specs, err := cron.parseAsSpec(`\* \* \* \* \*`, false)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(specs))
+	assert.Equal(t, "first", specs[0].environ["JOB"])
+	assert.Equal(t, "second", specs[1].environ["JOB"])
+}

@@ -2,6 +2,7 @@
 package concurrency
 
 import (
+	"context"
 	"errors"
 )
 
@@ -23,6 +24,16 @@ func NewConcurrentPool(capacity uint) (*ConcurrentPool, error) {
 // Lock acquires a slot from the pool, waiting if necessary until one becomes available.
 func (p *ConcurrentPool) Lock() {
 	p.sem <- struct{}{}
+}
+
+// LockContext acquires a slot or returns when ctx is canceled.
+func (p *ConcurrentPool) LockContext(ctx context.Context) error {
+	select {
+	case p.sem <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 // Unlock releases a slot, making it available for other goroutines.

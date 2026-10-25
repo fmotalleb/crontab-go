@@ -28,6 +28,18 @@
           "type": "boolean",
           "description": "Enable Prometheus /metrics endpoint."
         },
+        "webserver_username": {
+          "type": "string",
+          "description": "Basic authentication username for web endpoints."
+        },
+        "webserver_password": {
+          "type": "string",
+          "description": "Basic authentication password for web endpoints."
+        },
+        "webserver_allow_unauthenticated": {
+          "type": "boolean",
+          "description": "Explicitly allow unauthenticated web event dispatch on a trusted network."
+        },
         "observability": {
           "$ref": "#/definitions/Observability",
           "description": "OpenTelemetry configuration for tracing, metrics, and logging export."

@@ -10,11 +10,13 @@ import (
 // Config represents the configuration for the crontab application.
 type Config struct {
 	// Web-server config
-	WebServerAddress  string `mapstructure:"webserver_address" json:"webserver_address,omitempty"`
-	WebServerPort     uint   `mapstructure:"webserver_port" json:"webserver_port,omitempty"`
-	WebserverUsername string `mapstructure:"webserver_username" json:"webserver_username,omitempty"`
-	WebServerPassword string `mapstructure:"webserver_password" json:"webserver_password,omitempty"`
-	WebServerMetrics  bool   `mapstructure:"webserver_metrics" json:"webserver_metrics,omitempty"`
+	WebServerAddress              string            `mapstructure:"webserver_address" json:"webserver_address,omitempty"`
+	WebServerPort                 uint              `mapstructure:"webserver_port" json:"webserver_port,omitempty"`
+	WebserverUsername             string            `mapstructure:"webserver_username" json:"webserver_username,omitempty"`
+	WebServerPassword             string            `mapstructure:"webserver_password" json:"webserver_password,omitempty"`
+	WebServerMetrics              bool              `mapstructure:"webserver_metrics" json:"webserver_metrics,omitempty"`
+	AllowUnauthenticatedWebserver bool              `mapstructure:"webserver_allow_unauthenticated" json:"webserver_allow_unauthenticated,omitempty"`
+	Variables                     map[string]string `mapstructure:"variables" json:"variables,omitempty"`
 
 	Jobs []*JobConfig `mapstructure:"jobs" json:"jobs"`
 
@@ -53,7 +55,7 @@ type DockerEvent struct {
 	Image            string            `mapstructure:"image" json:"image,omitempty"`
 	Actions          []string          `mapstructure:"actions" json:"actions,omitempty"`
 	Labels           map[string]string `mapstructure:"labels" json:"labels,omitempty"`
-	ErrorLimit       uint              `mapstructure:"error-limit-count" json:"error-limit,omitempty"`
+	ErrorLimit       uint              `mapstructure:"error-limit-count" json:"error-limit-count,omitempty"`
 	ErrorLimitPolicy ErrorLimitPolicy  `mapstructure:"error-limit-policy" json:"error-limit-policy,omitempty"`
 	ErrorThrottle    time.Duration     `mapstructure:"error-throttle" json:"error-throttle,omitempty"`
 }
@@ -75,7 +77,7 @@ type Task struct {
 
 	// Command params
 	Command          string            `mapstructure:"command" json:"command,omitempty"`
-	WorkingDirectory string            `mapstructure:"working-dir" json:"working-directory,omitempty"`
+	WorkingDirectory string            `mapstructure:"working-dir" json:"working-dir,omitempty"`
 	UserName         string            `mapstructure:"user" json:"user,omitempty"`
 	GroupName        string            `mapstructure:"group" json:"group,omitempty"`
 	Env              map[string]string `mapstructure:"env" json:"env,omitempty"`

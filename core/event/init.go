@@ -1,8 +1,6 @@
 package event
 
 import (
-	"context"
-
 	"go.uber.org/zap"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -37,7 +35,7 @@ type Init struct{}
 
 // BuildTickChannel implements abstraction.Scheduler.
 func (c *Init) BuildTickChannel(ed abstraction.EventDispatcher) {
-	ctx := context.Background()
+	ctx := global.CTX()
 	ed.Emit(ctx, NewMetaData("init", map[string]any{}))
 	global.IncMetric(
 		InitEventsMetricName,

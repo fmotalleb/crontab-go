@@ -46,3 +46,9 @@ Audit date: 2026-10-25. Scope: startup and shutdown, event sources, job executio
 ## Audit limitations
 
 Docker behavior and signal handling were assessed from source, without a live Docker daemon or container shutdown test. The plan calls for those reproductions before considering the relevant fixes complete. The checks run for this audit and any environment limitations are recorded in `TODO/2026-10-25-project-audit.md`.
+
+## Implementation status — 2026-10-25
+
+Implemented the planned code, config, documentation, and CI changes in this change set. Concurrency continues to limit individual tasks; hooks retain their documented per-task behavior. Web event dispatch blocks until listener callbacks return, is limited to 64 concurrent requests, and requires Basic Auth unless the explicit unauthenticated opt-in is set. Shutdown now stops cron and drains tracked tasks with a deadline. Docker exit status helpers and job/web/config regression tests were added. The audit limitations still apply: Docker behavior was not exercised against a live daemon, and signal handling was not tested through a spawned process.
+
+Validation completed: `go build ./...`, `go vet ./...`, `go test ./...`, `go test -race ./...`, and `go tool golangci-lint run ./...`.
