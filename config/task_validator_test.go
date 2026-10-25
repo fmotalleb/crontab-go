@@ -70,7 +70,7 @@ func TestTaskValidate_InvalidPostData(t *testing.T) {
 	task := &config.Task{
 		Post:       "http://localhost",
 		Timeout:    10,
-		Data:       map[any]any{},
+		Data:       map[any]any{struct{}{}: "value"},
 		RetryDelay: 5,
 	}
 

@@ -1,8 +1,6 @@
 package event
 
 import (
-	"context"
-
 	"go.uber.org/zap"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -35,9 +33,9 @@ func newInitGenerator(_ *zap.Logger, cfg *config.JobEvent) (abstraction.EventGen
 
 type Init struct{}
 
-// BuildTickChannel implements abstraction.Scheduler.
+// BuildTickChannel emits one init event using the global context and returns.
 func (c *Init) BuildTickChannel(ed abstraction.EventDispatcher) {
-	ctx := context.Background()
+	ctx := global.CTX()
 	ed.Emit(ctx, NewMetaData("init", map[string]any{}))
 	global.IncMetric(
 		InitEventsMetricName,

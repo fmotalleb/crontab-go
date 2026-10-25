@@ -1,6 +1,6 @@
 # AGENTS.md
 
-YAML-configured crontab replacement for Docker environments. Single Go module `github.com/fmotalleb/crontab-go`, Go 1.26, generic-heavy modern stdlib.
+YAML-configured crontab replacement for Docker environments. Single Go module `github.com/fmotalleb/crontab-go`, Go 1.27, generic-heavy modern stdlib.
 
 ## Workflow (always)
 - Always **review code after changing it**: re-read the diff, then run `go build`/`go vet`, `go test ./...`, and `go tool golangci-lint run ./...` before finishing.

@@ -3,6 +3,7 @@ package jobs
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/zap"
 
@@ -20,7 +21,9 @@ func initEventSignal(ed abstraction.EventDispatcher, events []abstraction.EventG
 	logger.Debug("signals initialized")
 }
 
-func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executable, []abstraction.Executable, []abstraction.Executable) {
+// initTasks builds the job's tasks, done hooks, and failure hooks, in that return order.
+// A build failure returns three nil slices and a wrapped task or hook build error.
+func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executable, []abstraction.Executable, []abstraction.Executable, error) {
 	tasks := make([]abstraction.Executable, 0, len(job.Tasks))
 	doneHooks := make([]abstraction.Executable, 0, len(job.Hooks.Done))
 	failHooks := make([]abstraction.Executable, 0, len(job.Hooks.Failed))
@@ -30,7 +33,7 @@ func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executab
 	for _, t := range job.Tasks {
 		exe, err := task.Build(ctx, logger, t)
 		if err != nil {
-			logger.Panic("failed to build task", zap.Error(err))
+			return nil, nil, nil, fmt.Errorf("failed to build task: %w", err)
 		}
 		tasks = append(tasks, exe)
 	}
@@ -38,7 +41,7 @@ func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executab
 	for _, t := range job.Hooks.Done {
 		exe, err := task.Build(ctx, logger, t)
 		if err != nil {
-			logger.Panic("failed to build done hook", zap.Error(err))
+			return nil, nil, nil, fmt.Errorf("failed to build done hook: %w", err)
 		}
 		doneHooks = append(doneHooks, exe)
 	}
@@ -46,22 +49,24 @@ func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executab
 	for _, t := range job.Hooks.Failed {
 		exe, err := task.Build(ctx, logger, t)
 		if err != nil {
-			logger.Panic("failed to build fail hook", zap.Error(err))
+			return nil, nil, nil, fmt.Errorf("failed to build fail hook: %w", err)
 		}
 		failHooks = append(failHooks, exe)
 	}
 	logger.Debug("Compiled Hooks.Fail")
-	return tasks, doneHooks, failHooks
+	return tasks, doneHooks, failHooks, nil
 }
 
-func initEvents(job config.JobConfig, logger *zap.Logger) []abstraction.EventGenerator {
+// initEvents builds the job's event generators in configuration order.
+// It returns nil and a wrapped event build error if any event cannot be built.
+func initEvents(job config.JobConfig, logger *zap.Logger) ([]abstraction.EventGenerator, error) {
 	events := make([]abstraction.EventGenerator, 0, len(job.Events))
 	for _, sh := range job.Events {
 		ev, err := event.Build(logger, &sh)
 		if err != nil {
-			logger.Panic("failed to build event", zap.Error(err))
+			return nil, fmt.Errorf("failed to build event: %w", err)
 		}
 		events = append(events, ev)
 	}
-	return events
+	return events, nil
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 
@@ -60,6 +61,9 @@ var acceptedActions = utils.NewList(
 	events.ActionHealthStatusUnhealthy,
 )
 
+// Validate skips disabled jobs. Enabled jobs must have a name, tasks, and events.
+// It returns the first error from these requirements or from validating events,
+// tasks, and job hooks, or nil when all checks pass.
 func (c *JobConfig) Validate(log *zap.Logger) error {
 	// Log the start of validation
 	log.Debug("begin Validation")
@@ -69,6 +73,15 @@ func (c *JobConfig) Validate(log *zap.Logger) error {
 		// Log the disabled job
 		log.Warn("job is disabled")
 		return nil
+	}
+	if c.Name == "" {
+		return errors.New("job name must not be empty")
+	}
+	if len(c.Tasks) == 0 {
+		return fmt.Errorf("job %q must define at least one task", c.Name)
+	}
+	if len(c.Events) == 0 {
+		return fmt.Errorf("job %q must define at least one event", c.Name)
 	}
 	checkList := []func(*JobConfig, *zap.Logger) error{
 		validateEvents,
@@ -122,10 +135,15 @@ func validateJobHooks(c *JobConfig, log *zap.Logger) error {
 	return nil
 }
 
-// Validate checks the validity of a JobEvent configuration.
-// It ensures that the event has a valid interval or cron expression, and only one of on_init, interval, or cron is set.
-// It returns an error if the validation fails, otherwise, it returns nil.
+// Validate requires exactly one of on-init, interval, cron, web-event, docker,
+// or log-file. It rejects negative intervals and log check cycles, invalid cron
+// expressions, and invalid Docker matchers, actions, or error settings.
+// It returns the first validation error, including cron or regexp parsing errors,
+// or nil when all checks pass.
 func (s *JobEvent) Validate(log *zap.Logger) error {
+	if s.LogCheckCycle < 0 {
+		return fmt.Errorf("log-check-cycle cannot be negative: %s", s.LogCheckCycle)
+	}
 	// Check if the interval is a negative value
 	if s.Interval < 0 {
 		err := fmt.Errorf("received a negative time in interval: `%v`", s.Interval)

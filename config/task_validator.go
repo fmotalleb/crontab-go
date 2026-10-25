@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -45,15 +46,24 @@ func (t *Task) Validate(log *zap.Logger) error {
 	return nil
 }
 
+// validateRetry returns an error if any retry delay, timeout, maximum delay,
+// or jitter is negative. Zero values are allowed.
 func validateRetry(t *Task, log *zap.Logger) error {
-	if t.RetryDelay < 0 {
-		err := fmt.Errorf(
-			"retry delay for tasks cannot be negative received `%d` for %+v",
-			t.RetryDelay,
-			t,
-		)
-		log.Warn("Validation failed for Task", zap.Error(err))
-		return err
+	for name, duration := range map[string]time.Duration{
+		"retry delay":     t.RetryDelay,
+		"retry timeout":   t.RetryTimeout,
+		"retry max delay": t.RetryMaxDelay,
+		"retry jitter":    t.RetryJitter,
+	} {
+		if duration < 0 {
+			err := fmt.Errorf(
+				"%s for tasks cannot be negative; received %s",
+				name,
+				duration,
+			)
+			log.Warn("Validation failed for Task", zap.Error(err))
+			return err
+		}
 	}
 	return nil
 }

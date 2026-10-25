@@ -24,6 +24,8 @@ func init() {
 	tg.Register(NewPost)
 }
 
+// NewPost creates a POST task with the configured retry and timeout settings.
+// It returns nil, false when no POST URL is configured.
 func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool) {
 	if task.Post == "" {
 		return nil, false
@@ -34,7 +36,7 @@ func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, boo
 		data:    &task.Data,
 		task:    task,
 		log: logger.With(
-			zap.String("url", task.Post),
+			zap.String("url", redactedURL(task.Post)),
 			zap.String("method", "post"),
 		),
 	}
@@ -57,14 +59,18 @@ type Post struct {
 	log     *zap.Logger
 }
 
-// Do implements common.Action.
+// Do sends one POST request with JSON task data, headers, and the task timeout,
+// writing the response body to stderr with an execution prefix. Cancel can
+// interrupt the request. It returns JSON encoding, request construction, transport,
+// response copying, or HTTP status errors for responses of 400 or higher, and
+// converts recovered panics to errors. Response body close errors are ignored.
 func (p *Post) Do(ctx context.Context) (e error) {
 	execID := newExecutionID()
 	ctx = populateVars(ctx, p.task)
 	_, span := taskTracer.Start(
 		ctx, "http.post",
 		trace.WithAttributes(
-			attribute.String("url.full", p.address),
+			attribute.String("url.full", redactedURL(p.address)),
 			attribute.String("http.request.method", "POST"),
 			attribute.String("execution.id", execID),
 			attribute.Bool("tls.insecure_skip_verify", p.task.Insecure),
@@ -98,7 +104,8 @@ func (p *Post) Do(ctx context.Context) (e error) {
 
 	localCtx, cancel := p.ApplyTimeout(ctx)
 	defer cancel()
-	p.SetCancel(cancel)
+	unregisterCancel := p.RegisterCancel(cancel)
+	defer unregisterCancel()
 
 	p.setURLAttrs(span)
 	p.setRetryAttrs(span)

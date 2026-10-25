@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"strings"
 
@@ -59,6 +60,10 @@ func (s CronString) lines() []string {
 	return strings.Split(s.string, "\n")
 }
 
+// parseAsSpec parses sanitized crontab entries using pattern for the schedule field.
+// When hasUser is true, entries must include a user before the command.
+// Each entry keeps a snapshot of preceding environment assignments.
+// It returns matcher construction errors or errors parsing nonempty lines.
 func (s *CronString) parseAsSpec(
 	pattern string,
 	hasUser bool,
@@ -86,7 +91,7 @@ func (s *CronString) parseAsSpec(
 				envTable[key] = val
 			}
 		} else {
-			spec, err := l.exportSpec(matcher, envTable, parser)
+			spec, err := l.exportSpec(matcher, maps.Clone(envTable), parser)
 			if err != nil {
 				return nil, err
 			}
@@ -113,6 +118,9 @@ func (s *CronString) ParseConfig(
 	return cfg, nil
 }
 
+// buildMapper builds a line matcher and parser using pattern as the schedule regexp.
+// hasUser requires a user field between the schedule and command.
+// It returns regexp compilation errors or errors locating required capture groups.
 func buildMapper(hasUser bool, pattern string) (*regexp.Regexp, cronSpecParser, error) {
 	lineParser := "(?<cmd>.*)"
 	if hasUser {
@@ -123,7 +131,7 @@ func buildMapper(hasUser bool, pattern string) (*regexp.Regexp, cronSpecParser, 
 
 	matcher, err := regexp.Compile(cronLineMatcher)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to compile cron line parser regexp: `%s`", matcher)
+		return nil, nil, fmt.Errorf("failed to compile cron line parser regexp %q: %w", cronLineMatcher, err)
 	}
 	parser, err := getLineParser(hasUser, matcher)
 	if err != nil {

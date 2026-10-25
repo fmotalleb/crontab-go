@@ -1,6 +1,7 @@
 package concurrency
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -62,4 +63,16 @@ func TestConcurrentPool_LockUnlockGoroutine(t *testing.T) {
 		assert.NotZero(t, diff)
 		assert.True(t, diff >= 50)
 	})
+}
+
+func TestConcurrentPool_LockContextReturnsOnCancellation(t *testing.T) {
+	pool, err := NewConcurrentPool(1)
+	assert.NoError(t, err)
+	pool.Lock()
+	defer pool.Unlock()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	assert.Error(t, pool.LockContext(ctx))
+	assert.Equal(t, 1, pool.get())
 }

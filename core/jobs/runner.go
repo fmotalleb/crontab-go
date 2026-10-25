@@ -1,6 +1,8 @@
 package jobs
 
 import (
+	"fmt"
+
 	"github.com/maniartech/signals"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
@@ -15,7 +17,12 @@ import (
 	"github.com/fmotalleb/crontab-go/core/global"
 )
 
-func InitializeJobs(jobs []*config.JobConfig) {
+// InitializeJobs validates and starts enabled jobs, defaulting zero concurrency
+// to one in the supplied configurations. variables supplies shared template
+// values copied into each task execution's context. It returns wrapped validation,
+// concurrency pool, task, hook, or event build errors. Jobs already started remain
+// active if initializing a later job fails.
+func InitializeJobs(jobs []*config.JobConfig, variables map[string]string) error {
 	log := global.Logger("Cron")
 	for _, job := range jobs {
 		if job.Disabled {
@@ -29,14 +36,14 @@ func InitializeJobs(jobs []*config.JobConfig) {
 
 		lock, err := concurrency.NewConcurrentPool(job.Concurrency)
 		if err != nil {
-			log.Panic("failed to validate job", zap.String("job.name", job.Name), zap.Error(err))
+			return fmt.Errorf("job %q: %w", job.Name, err)
 		}
 		logger := log.With(
 			zap.String("job.name", job.Name),
 			zap.Uint("job.concurrency", job.Concurrency),
 		)
-		if err := job.Validate(logger.Named("Validator")); err != nil {
-			log.Panic("failed to validate job", zap.String("job", job.Name), zap.Error(err))
+		if validationErr := job.Validate(logger.Named("Validator")); validationErr != nil {
+			return fmt.Errorf("failed to validate job %q: %w", job.Name, validationErr)
 		}
 		var signal abstraction.EventDispatcher = signals.NewSync[abstraction.Event]()
 		var debounceAttr attribute.KeyValue
@@ -54,20 +61,32 @@ func InitializeJobs(jobs []*config.JobConfig) {
 				"job": job.Name,
 			},
 		)
-		tasks, doneHooks, failHooks := initTasks(*job, logger.Named("Task"))
+		tasks, doneHooks, failHooks, err := initTasks(*job, logger.Named("Task"))
+		if err != nil {
+			return fmt.Errorf("job %q: %w", job.Name, err)
+		}
 		logger.Debug("Tasks initialized")
 
-		taskHandler(logger.Named("TaskRunner"), signal, tasks, doneHooks, failHooks, lock, job.Name)
-		buildSignal(signal, *job, logger.Named("SignalGen"))
+		taskHandler(logger.Named("TaskRunner"), signal, tasks, doneHooks, failHooks, lock, job.Name, variables)
+		if err := buildSignal(signal, *job, logger.Named("SignalGen")); err != nil {
+			return fmt.Errorf("job %q: %w", job.Name, err)
+		}
 
 		logger.Debug("EventLoop initialized")
 	}
 	log.Info("Jobs Are Ready")
+	return nil
 }
 
-func buildSignal(ed abstraction.EventDispatcher, job config.JobConfig, logger *zap.Logger) {
-	events := initEvents(job, logger)
+// buildSignal builds and starts the job's event generators for ed.
+// It returns the event build error without starting generators if building fails.
+func buildSignal(ed abstraction.EventDispatcher, job config.JobConfig, logger *zap.Logger) error {
+	events, err := initEvents(job, logger)
+	if err != nil {
+		return err
+	}
 	logger.Debug("Events initialized")
 
 	initEventSignal(ed, events, logger)
+	return nil
 }

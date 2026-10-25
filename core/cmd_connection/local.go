@@ -61,7 +61,6 @@ func (l *Local) Prepare(ctx context.Context, task *config.Task) error {
 	)
 	l.cmd.WaitDelay = time.Second
 	l.log = l.log.With(
-		zap.String("cmd", task.Command),
 		zap.String("working_directory", workingDir),
 		zap.String("shell", shell),
 		zap.Strings("shell_args", commandArg),

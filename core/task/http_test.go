@@ -4,7 +4,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/alecthomas/assert/v2"
@@ -26,18 +26,30 @@ func TestNewHTTPClient_InsecureSkipsVerify(t *testing.T) {
 	assert.True(t, tr.TLSClientConfig.InsecureSkipVerify)
 }
 
-func TestDoHTTP_StatusError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, "oops", http.StatusInternalServerError)
-	}))
-	defer srv.Close()
+func TestRedactedURLOmitsCredentialsAndPath(t *testing.T) {
+	assert.Equal(t, "https://example.com:8443", redactedURL("https://user:secret@example.com:8443/path/token?access=secret"))
+	assert.Equal(t, "<invalid-url>", redactedURL("http://["))
+}
 
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+func TestDoHTTP_StatusError(t *testing.T) {
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.test/", nil)
 	assert.NoError(t, err)
 	headers := map[string]string{}
-	_, err = doHTTP(srv.Client(), req, &headers, io.Discard, zap.NewNop())
+	client := &http.Client{Transport: statusTransport{}}
+	_, err = doHTTP(client, req, &headers, io.Discard, zap.NewNop())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "500")
+}
+
+type statusTransport struct{}
+
+func (statusTransport) RoundTrip(*http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusInternalServerError,
+		Status:     "500 Internal Server Error",
+		Header:     make(http.Header),
+		Body:       io.NopCloser(strings.NewReader("oops\n")),
+	}, nil
 }
 
 type failingBodyReader struct{}
