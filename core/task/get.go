@@ -22,6 +22,8 @@ func init() {
 	tg.Register(NewGet)
 }
 
+// NewGet creates a GET task with the configured retry and timeout settings.
+// It returns nil, false when no GET URL is configured.
 func NewGet(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool) {
 	if task.Get == "" {
 		return nil, false
@@ -52,7 +54,11 @@ type Get struct {
 	log     *zap.Logger
 }
 
-// Do implements common.Action.
+// Do sends one GET request with the task headers and timeout, writing the
+// response body to stderr with an execution prefix. Cancel can interrupt the request.
+// It returns request construction, transport, response copying, or HTTP status
+// errors for responses of 400 or higher, and converts recovered panics to errors.
+// Response body close errors are ignored.
 func (g *Get) Do(ctx context.Context) (e error) {
 	execID := newExecutionID()
 	ctx = populateVars(ctx, g.task)

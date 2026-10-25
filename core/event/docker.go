@@ -107,6 +107,10 @@ func (dockerEvent *DockerEvent) BuildTickChannel(ed abstraction.EventDispatcher)
 	}
 }
 
+// connectAndListen dispatches matching Docker events until cancellation or a
+// stream failure requires reconnecting or stopping. It returns true when the
+// reconnect policy permits another attempt after its delay; errors are handled
+// by the configured policy rather than returned to the caller.
 func (dockerEvent *DockerEvent) connectAndListen(ed abstraction.EventDispatcher) bool {
 	cli, err := client.NewClientWithOpts(
 		client.WithHost(dockerEvent.connection),
@@ -174,6 +178,11 @@ const (
 	dockerStop
 )
 
+// handleStreamError counts nonnil errors when the threshold is nonzero and
+// returns whether to keep listening, reconnect, or stop. A nil error or zero
+// threshold leaves count unchanged. Below the threshold it waits for any
+// configured throttle, stopping if ctx is canceled during that wait.
+// Reaching the threshold with the kill policy or an unknown policy terminates the process.
 func (d *DockerEvent) handleStreamError(ctx context.Context, count *uint, err error) dockerStreamAction {
 	if err == nil {
 		return dockerKeepListening
@@ -230,6 +239,9 @@ func (dockerEvent *DockerEvent) matches(msg *events.Message) bool {
 	return true
 }
 
+// shouldReconnect waits for the configured throttle and returns true only for
+// the reconnect policy with an active context. The give-up policy returns false;
+// the kill policy or an unknown policy terminates the process.
 func (dockerEvent *DockerEvent) shouldReconnect(ctx context.Context) bool {
 	switch dockerEvent.errorPolicy {
 	case config.ErrorPolReconnect:

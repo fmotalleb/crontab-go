@@ -60,6 +60,10 @@ func (s CronString) lines() []string {
 	return strings.Split(s.string, "\n")
 }
 
+// parseAsSpec parses sanitized crontab entries using pattern for the schedule field.
+// When hasUser is true, entries must include a user before the command.
+// Each entry keeps a snapshot of preceding environment assignments.
+// It returns matcher construction errors or errors parsing nonempty lines.
 func (s *CronString) parseAsSpec(
 	pattern string,
 	hasUser bool,
@@ -114,6 +118,9 @@ func (s *CronString) ParseConfig(
 	return cfg, nil
 }
 
+// buildMapper builds a line matcher and parser using pattern as the schedule regexp.
+// hasUser requires a user field between the schedule and command.
+// It returns regexp compilation errors or errors locating required capture groups.
 func buildMapper(hasUser bool, pattern string) (*regexp.Regexp, cronSpecParser, error) {
 	lineParser := "(?<cmd>.*)"
 	if hasUser {

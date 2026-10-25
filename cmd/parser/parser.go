@@ -51,12 +51,16 @@ func run(cmd *cobra.Command, _ []string) {
 	os.Exit(0)
 }
 
+// writeOutput writes result to cfg.output, replacing any existing contents.
+// It panics if the file cannot be created or written.
 func writeOutput(log *zap.Logger, cfg *parserConfig, result string) {
 	if err := os.WriteFile(cfg.output, []byte(result), 0o644); err != nil {
 		log.Panic("failed to write output file", zap.Error(err))
 	}
 }
 
+// readInCron reads cfg.cronFile without parsing its contents.
+// It returns an error for an empty path or wraps the file read error.
 func readInCron(cfg *parserConfig) (*CronString, error) {
 	if cfg.cronFile == "" {
 		return nil, errors.New("please provide a cron file path, usage: `--help`")

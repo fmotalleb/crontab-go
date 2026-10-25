@@ -36,6 +36,9 @@ type (
 	}
 )
 
+// newGlobalContext creates a context canceled by an interrupt or SIGTERM,
+// with an environment-configured logger and an empty event listener registry.
+// It panics if logger initialization fails.
 func newGlobalContext() *Context {
 	ctx := context.Background()
 	ctx, err := log.WithNewEnvLogger(ctx)
@@ -86,6 +89,8 @@ func (c *Context) Deadline() (time.Time, bool) {
 	return c.Context.Deadline()
 }
 
+// EventListeners returns a snapshot of the listener registry.
+// Changing the returned map or handler slices does not change registered listeners.
 func (c *Context) EventListeners() EventListenerMap {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

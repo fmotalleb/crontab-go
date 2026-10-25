@@ -160,6 +160,9 @@ func warnOnErr(err error, message string) {
 	}
 }
 
+// initConfig loads CFG from the selected configuration file and environment,
+// applies defaults, and validates it. It returns wrapped errors from reading,
+// unmarshaling, applying defaults, or validation.
 func initConfig() error {
 	setupEnv()
 
@@ -185,6 +188,7 @@ func initConfig() error {
 	return nil
 }
 
+// setupEnv binds webserver environment aliases and enables automatic environment lookup.
 func setupEnv() {
 	warnOnErr(
 		viper.BindEnv(

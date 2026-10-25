@@ -124,8 +124,11 @@ func (d *DockerCreateConnection) Connect() error {
 	return nil
 }
 
-// Execute creates, starts, and streams the output of the Docker container.
-// Returns an error if any step fails.
+// Execute creates a container for the prepared command, waits for it to finish,
+// and copies its logs to stdout and stderr. Start failures are retried every
+// second until the prepared context is canceled. It returns creation, wait,
+// log retrieval, output copying, cancellation, or nonzero exit status errors.
+// Container removal is attempted on return; removal and log close errors are ignored.
 func (d *DockerCreateConnection) Execute(stdout, stderr io.Writer) error {
 	ctx := d.ctx
 	// Create the exec instance

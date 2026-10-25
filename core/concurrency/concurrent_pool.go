@@ -27,6 +27,7 @@ func (p *ConcurrentPool) Lock() {
 }
 
 // LockContext acquires a slot or returns when ctx is canceled.
+// It returns nil on acquisition or ctx.Err() if cancellation interrupts the wait.
 func (p *ConcurrentPool) LockContext(ctx context.Context) error {
 	select {
 	case p.sem <- struct{}{}:

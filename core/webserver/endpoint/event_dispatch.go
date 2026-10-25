@@ -16,6 +16,9 @@ func NewEventDispatchEndpoint() *EventDispatchEndpoint {
 	return &EventDispatchEndpoint{}
 }
 
+// Endpoint invokes listeners for the route's event synchronously, passing query
+// parameters as slices of strings. It responds with 404 when no listeners exist
+// or 200 after all listeners return, and returns any response write error.
 func (ed *EventDispatchEndpoint) Endpoint(c echo.Context) error {
 	e := c.Param("event")
 

@@ -59,6 +59,10 @@ type LogFile struct {
 	metricLabels prometheus.Labels
 }
 
+// NewLogFile configures a listener for matching lines appended to filePath.
+// An empty matcherStr defaults to "." and a zero checkCycle to one second.
+// It returns an error for a negative checkCycle or wraps a regexp compilation
+// error. The file is opened only when BuildTickChannel starts polling.
 func NewLogFile(filePath, matcherStr string, checkCycle time.Duration, logger *zap.Logger) (*LogFile, error) {
 	if checkCycle < 0 {
 		return nil, fmt.Errorf("log check cycle cannot be negative: %s", checkCycle)
@@ -94,6 +98,11 @@ func NewLogFile(filePath, matcherStr string, checkCycle time.Duration, logger *z
 	}, nil
 }
 
+// BuildTickChannel polls the log file and emits events for matching complete,
+// nonempty lines until the global context is canceled. It skips existing content
+// on the initial open, reads replacements from the beginning, and restarts from
+// the beginning when truncation is detected. File errors are handled internally;
+// polling continues without returning them to the caller.
 func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 	ctx, cancel := context.WithCancel(global.CTX())
 	defer cancel()
@@ -157,6 +166,10 @@ func (lf *LogFile) BuildTickChannel(ed abstraction.EventDispatcher) {
 	}
 }
 
+// openFile opens the log and returns its reader, file information, and byte offset.
+// skipExisting positions it at the end; otherwise reading starts at the beginning.
+// On open, stat, or seek failure it returns nil values and a zero offset.
+// The caller must close a successfully opened file.
 func (lf *LogFile) openFile(skipExisting bool) (*os.File, *bufio.Reader, os.FileInfo, int64) {
 	file, err := os.Open(lf.filePath)
 	if err != nil {
@@ -181,6 +194,9 @@ func (lf *LogFile) openFile(skipExisting bool) (*os.File, *bufio.Reader, os.File
 	return file, bufio.NewReader(file), info, offset
 }
 
+// processNewLines emits matching complete, nonempty lines with file, line, and
+// capture group metadata. It retains an unfinished line in pending at EOF and
+// updates offset in bytes. Other read errors stop this pass without being returned.
 func (lf *LogFile) processNewLines(ctx context.Context, reader *bufio.Reader, ed abstraction.EventDispatcher, pending *string, offset *int64) {
 	for {
 		line, err := reader.ReadString('\n')
