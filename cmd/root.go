@@ -56,9 +56,10 @@ within your containerized applications.`,
 		l := global.Logger("cron")
 		l.Info("Booting up")
 
+		// gotel reads the observability configuration from the first option.
 		otelResult, otelErr := gotel.Setup(global.CTX(),
-			gotel.WithVersion(git.String()),
 			gotel.WithConfig(CFG.Observability),
+			gotel.WithVersion(git.String()),
 			gotel.WithLogger(l),
 		)
 		if otelErr != nil {

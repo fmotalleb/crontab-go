@@ -150,15 +150,35 @@ func Logger(name string) *zap.Logger {
 }
 
 // AttachOTelCore tees an otelzap core onto the global logger, enabling
-// log records to be exported via OTLP alongside the console sink.
+// log records at the configured level to be exported alongside local output.
 func AttachOTelCore(otelCore zapcore.Core) {
 	ctx := c()
 	ctx.mu.Lock()
 	defer ctx.mu.Unlock()
 	existing := log.Of(ctx.Context)
-	combined := zapcore.NewTee(existing.Core(), otelCore)
-	replaced := existing.WithOptions(zap.WrapCore(func(_ zapcore.Core) zapcore.Core {
-		return combined
+	replaced := existing.WithOptions(zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		return zapcore.NewTee(core, otelLevelCore{Core: otelCore, level: core})
 	}))
 	ctx.Context = log.WithLogger(ctx.Context, replaced)
+}
+
+// otelLevelCore applies the configured Zap level before the exporter checks an entry.
+type otelLevelCore struct {
+	zapcore.Core
+	level zapcore.LevelEnabler
+}
+
+func (c otelLevelCore) Enabled(level zapcore.Level) bool {
+	return c.level.Enabled(level) && c.Core.Enabled(level)
+}
+
+func (c otelLevelCore) With(fields []zapcore.Field) zapcore.Core {
+	return otelLevelCore{Core: c.Core.With(fields), level: c.level}
+}
+
+func (c otelLevelCore) Check(entry zapcore.Entry, checked *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	if !c.level.Enabled(entry.Level) {
+		return checked
+	}
+	return c.Core.Check(entry, checked)
 }
