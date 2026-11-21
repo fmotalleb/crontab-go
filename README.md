@@ -113,6 +113,24 @@ All three signals are non-fatal: if a collector is unreachable at startup, the c
 
 Command and HTTP request (get/post) outputs are streamed to stderr (never stdout, never buffered in memory) with a per-line prefix of a unique per-execution id: `<id> | `. For commands, both stdout and stderr are piped into that single stream, and the same id is reported in the task's start and finish log messages so you can correlate log lines with a run's output. For get/post requests, set `insecure: true` on the task to skip TLS certificate verification (useful for self-signed certificates).
 
+### Legacy crontab files
+
+Run a user crontab with `crontab-go -c jobs.crontab`. Add `--with-user` for a system crontab that includes an execution account after each schedule. Switching accounts requires root. Convert either format to YAML with `crontab-go parse jobs.crontab -o jobs.yaml`, using the same `--with-user` flag for system files.
+
+```cron
+SHELL=/bin/sh
+CRON_TZ=Europe/Berlin
+ReportMode = "daily summary"
+5 8-18/2 * JAN-MAR MON-FRI /app/report "$ReportMode"
+@reboot /usr/bin/logger -t report%report scheduler started
+```
+
+- Assignments apply to subsequent entries. Names are case-sensitive, and quotes can preserve surrounding spaces. Commands run from `HOME` with the account's `LOGNAME` and `USER` and a default `PATH` of `/usr/bin:/bin`. Values and command text are passed literally to the shell.
+- Five-field schedules accept names, lists, ranges, steps, `0` and `7` for Sunday, and calendar aliases. `@reboot` runs once per crontab-go startup. Both commands accept `@every` durations. The converter also accepts an explicit `--matcher` for alternate field layouts.
+- `CRON_TZ` takes a zoneinfo name. Each `~` range picks one value per entry when the scheduler starts. `RANDOM_DELAY` shifts calendar schedules by a fixed number of minutes using a process-wide random scale.
+- Unescaped `%` starts standard input and inserts line breaks within that input. Use `\%` for a literal percent sign. A root-owned schedule can begin with `-` to suppress the command-start log.
+- Command output is streamed to stderr. Mail directives and the `-n` mail option have no delivery effect. `MLS_LEVEL` and `XDG_SESSION_CLASS` are passed as environment variables. Execution uses the scheduler's host security context.
+
 ## Getting Started
 
 To get started with Cronjob-go, simply download the binary for your platform and configure your scheduled tasks using the provided YAML format. The application's documentation includes detailed instructions on installation, configuration, and usage, making it easy to integrate into your existing Docker-based infrastructure.

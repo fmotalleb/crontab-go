@@ -40,6 +40,12 @@
 # webserver_metrics: false
 # webserver_allow_unauthenticated: false
 
+# The parse subcommand writes crontab metadata alongside the cron expression and command.
+# A cron event's crontab object enables five-field Cronie syntax, including random ranges.
+# Its optional time-zone and random-delay fields carry CRON_TZ and RANDOM_DELAY (minutes).
+# A command task's crontab object enables literal local execution. It can contain an
+# environment list of "NAME=value" strings, stdin text, and quiet for root-only start log suppression.
+
 jobs:
   # Jobs can be assigned a unique name, which will be included in log messages for easier debugging.
   - name: Test Job

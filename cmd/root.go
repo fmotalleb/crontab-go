@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/fmotalleb/go-tools/defaulter"
@@ -28,8 +30,9 @@ import (
 )
 
 var (
-	cfgFile string
-	CFG     *config.Config = &config.Config{}
+	cfgFile         string
+	crontabWithUser bool
+	CFG             *config.Config = &config.Config{}
 )
 
 var rootCmd = &cobra.Command{
@@ -149,7 +152,8 @@ func init() {
 	}
 
 	rootCmd.AddCommand(parser.ParserCmd)
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is config.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "YAML or .crontab config file (default is config.yaml)")
+	rootCmd.Flags().BoolVarP(&crontabWithUser, "with-user", "u", false, "read .crontab entries with a username field")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "enable debug logger")
 
 	// cobra.OnInitialize()
@@ -165,41 +169,57 @@ func warnOnErr(err error, message string) {
 // applies defaults, and validates it. It returns wrapped errors from reading,
 // unmarshaling, applying defaults, or validation.
 func initConfig() error {
-	setupEnv()
+	settings := viper.New()
+	setupEnv(settings)
 
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+	cfg := &config.Config{}
+	if strings.EqualFold(filepath.Ext(cfgFile), ".crontab") {
+		legacy, err := parser.ParseFile(cfgFile, "", crontabWithUser)
+		if err != nil {
+			return err
+		}
+		cfg.Jobs = legacy.Jobs
 	} else {
-		viper.SetConfigName("config")
-		viper.SetConfigType("yaml")
+		if err := readConfigFile(settings); err != nil {
+			return err
+		}
 	}
-
-	if err := viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("cannot read config file: %w", err)
-	}
-	if err := viper.Unmarshal(CFG); err != nil {
+	if err := settings.Unmarshal(cfg); err != nil {
 		return fmt.Errorf("cannot unmarshal config file: %w", err)
 	}
-	if err := defaulter.ApplyDefaults(CFG, CFG); err != nil {
+	if err := defaulter.ApplyDefaults(cfg, cfg); err != nil {
 		return fmt.Errorf("cannot apply config defaults: %w", err)
 	}
-	if err := CFG.Validate(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("failed to initialize config: %w", err)
+	}
+	CFG = cfg
+	return nil
+}
+
+func readConfigFile(settings *viper.Viper) error {
+	path := cfgFile
+	if path == "" {
+		path = "config.yaml"
+	}
+	settings.SetConfigFile(path)
+	if err := settings.ReadInConfig(); err != nil {
+		return fmt.Errorf("cannot read config file: %w", err)
 	}
 	return nil
 }
 
 // setupEnv binds webserver environment aliases and enables automatic environment lookup.
-func setupEnv() {
+func setupEnv(settings *viper.Viper) {
 	warnOnErr(
-		viper.BindEnv(
+		settings.BindEnv(
 			"webserver_port",
 			"listen_port",
 		),
 		"Cannot bind webserver_port env variable: %s",
 	)
 	warnOnErr(
-		viper.BindEnv(
+		settings.BindEnv(
 			"webserver_address",
 			"webserver_listen_address",
 			"listen_address",
@@ -207,7 +227,7 @@ func setupEnv() {
 		"Cannot bind webserver_address env variable: %s",
 	)
 	warnOnErr(
-		viper.BindEnv(
+		settings.BindEnv(
 			"webserver_password",
 			"password",
 		),
@@ -215,7 +235,7 @@ func setupEnv() {
 	)
 
 	warnOnErr(
-		viper.BindEnv(
+		settings.BindEnv(
 			"webserver_metrics",
 			"prometheus_metrics",
 		),
@@ -223,14 +243,14 @@ func setupEnv() {
 	)
 
 	warnOnErr(
-		viper.BindEnv(
+		settings.BindEnv(
 			"webserver_username",
 			"username",
 		),
 		"Cannot bind webserver_username env variable: %s",
 	)
 	warnOnErr(
-		viper.BindEnv(
+		settings.BindEnv(
 			"webserver_allow_unauthenticated",
 			"WEBSERVER_ALLOW_UNAUTHENTICATED",
 			"ALLOW_UNAUTHENTICATED_WEBSERVER",
@@ -238,5 +258,5 @@ func setupEnv() {
 		"Cannot bind webserver_allow_unauthenticated env variable: %s",
 	)
 
-	viper.AutomaticEnv()
+	settings.AutomaticEnv()
 }

@@ -24,12 +24,13 @@ func init() {
 
 func newCronGenerator(log *zap.Logger, cfg *config.JobEvent) (abstraction.EventGenerator, bool) {
 	if cfg.Cron != "" {
-		return NewCron(cfg.Cron, global.Get[*cron.Cron](), log), true
+		return newCron(*cfg, global.Get[*cron.Cron](), log), true
 	}
 	return nil, false
 }
 
 type Cron struct {
+	event        config.JobEvent
 	cronSchedule string
 	logger       *zap.Logger
 	cron         *cron.Cron
@@ -37,12 +38,18 @@ type Cron struct {
 }
 
 func NewCron(schedule string, c *cron.Cron, logger *zap.Logger) abstraction.EventGenerator {
+	return newCron(config.JobEvent{Cron: schedule}, c, logger)
+}
+
+func newCron(event config.JobEvent, c *cron.Cron, logger *zap.Logger) *Cron {
+	schedule := event.Cron
 	global.RegisterCounter(
 		CronEventsMetricName,
 		CronEventsMetricHelp,
 		prometheus.Labels{"cron": schedule},
 	)
 	cron := &Cron{
+		event:        event,
 		cronSchedule: schedule,
 		cron:         c,
 		logger: logger.
@@ -64,7 +71,7 @@ func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 	ctx, cancel := context.WithCancel(global.CTX())
 	defer cancel()
 	notifyChan := make(chan abstraction.Event)
-	schedule, err := config.DefaultCronParser.Parse(c.cronSchedule)
+	schedule, err := c.event.CronSchedule()
 	if err != nil {
 		c.logger.Warn("cannot initialize cron", zap.Error(err))
 		return

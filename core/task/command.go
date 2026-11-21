@@ -84,7 +84,9 @@ func (c *Command) Do(ctx context.Context) (e error) {
 		zap.String("id", execID),
 		zap.Time("start", time.Now()),
 	)
-	log.Info("command started")
+	if c.task.Crontab == nil || !c.task.Crontab.Quiet {
+		log.Info("command started")
+	}
 	defer c.recoverPanic(span, &e)
 	localCtx, cancel := c.ApplyTimeout(ctx)
 	defer cancel()

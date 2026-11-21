@@ -43,6 +43,14 @@ func NewLocalCMDConn(log *zap.Logger, cfg *config.TaskConnection) (abstraction.C
 // It sets up the command with the provided context, task, and environment.
 // It returns an error if the preparation fails.
 func (l *Local) Prepare(ctx context.Context, task *config.Task) error {
+	if task.Crontab != nil {
+		cmd, err := prepareCrontabCommand(ctx, task)
+		if err != nil {
+			return err
+		}
+		l.cmd = cmd
+		return nil
+	}
 	cmdCtx := command.NewCtx(ctx, task.Env, l.log)
 	workingDir := task.WorkingDirectory
 	if workingDir == "" {

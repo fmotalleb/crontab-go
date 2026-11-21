@@ -6,6 +6,7 @@ package credential
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	osUser "os/user"
 	"strconv"
@@ -26,7 +27,7 @@ func Validate(log *zap.Logger, usr string, grp string) error {
 	if err != nil {
 		return fmt.Errorf("cannot get uid and gid of user `%s` error: %w", usr, err)
 	}
-	_, err = lookupGID(grp, log)
+	_, err = lookupGID(grp)
 	if err != nil {
 		return fmt.Errorf("cannot get gid of group `%s` error: %w", grp, err)
 	}
@@ -45,13 +46,13 @@ func SetUser(log *zap.Logger, proc *exec.Cmd, usr string, grp string) {
 		log.Panic("cannot get uid and gid of user", zap.String("user", usr), zap.Error(err))
 	}
 	if grp != "" {
-		gid, _ = lookupGID(grp, log)
+		gid, _ = lookupGID(grp)
 	}
 
 	setUID(proc, uid, gid)
 }
 
-func lookupGID(grp string, _ *zap.Logger) (gid uint32, err error) {
+func lookupGID(grp string) (gid uint32, err error) {
 	if grp == "" {
 		return 0, nil
 	}
@@ -96,4 +97,41 @@ func setUID(
 		Uid: uid,
 		Gid: gid,
 	}
+}
+
+// SetCrontabUser applies the execution account and its supplementary groups.
+func SetCrontabUser(proc *exec.Cmd, account *osUser.User, group string) error {
+	if account.Uid == strconv.Itoa(os.Geteuid()) && group == "" {
+		return nil
+	}
+	uid, err := strconv.ParseUint(account.Uid, 10, 32)
+	if err != nil {
+		return fmt.Errorf("invalid crontab user ID: %w", err)
+	}
+	gid, err := strconv.ParseUint(account.Gid, 10, 32)
+	if err != nil {
+		return fmt.Errorf("invalid crontab group ID: %w", err)
+	}
+	primary := uint32(gid)
+	if group != "" {
+		primary, err = lookupGID(group)
+		if err != nil {
+			return err
+		}
+	}
+	groups, err := account.GroupIds()
+	if err != nil {
+		return fmt.Errorf("resolve groups for crontab user %q: %w", account.Username, err)
+	}
+	supplementary := make([]uint32, 0, len(groups))
+	for _, groupID := range groups {
+		id, err := strconv.ParseUint(groupID, 10, 32)
+		if err != nil {
+			return fmt.Errorf("invalid crontab supplementary group ID: %w", err)
+		}
+		supplementary = append(supplementary, uint32(id))
+	}
+	setUID(proc, uint32(uid), primary)
+	proc.SysProcAttr.Credential.Groups = supplementary
+	return nil
 }

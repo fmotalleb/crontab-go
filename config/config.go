@@ -37,11 +37,12 @@ type JobConfig struct {
 
 // JobEvent represents the scheduling configuration for a job.
 type JobEvent struct {
-	Cron     string        `mapstructure:"cron" json:"cron,omitempty"`
-	Interval time.Duration `mapstructure:"interval" json:"interval,omitempty"`
-	OnInit   bool          `mapstructure:"on-init" json:"on-init,omitempty"`
-	WebEvent string        `mapstructure:"web-event" json:"web-event,omitempty"`
-	Docker   *DockerEvent  `mapstructure:"docker" json:"docker,omitempty"`
+	Crontab  *CrontabTiming `mapstructure:"crontab" json:"crontab,omitempty"`
+	Cron     string         `mapstructure:"cron" json:"cron,omitempty"`
+	Interval time.Duration  `mapstructure:"interval" json:"interval,omitempty"`
+	OnInit   bool           `mapstructure:"on-init" json:"on-init,omitempty"`
+	WebEvent string         `mapstructure:"web-event" json:"web-event,omitempty"`
+	Docker   *DockerEvent   `mapstructure:"docker" json:"docker,omitempty"`
 
 	LogFile       string        `mapstructure:"log-file" json:"log-file,omitempty"`
 	LogCheckCycle time.Duration `mapstructure:"log-check-cycle" json:"log-check-cycle,omitempty"`
@@ -76,6 +77,7 @@ type Task struct {
 	Insecure bool              `mapstructure:"insecure" json:"insecure,omitempty"`
 
 	// Command params
+	Crontab          *CrontabCommand   `mapstructure:"crontab" json:"crontab,omitempty"`
 	Command          string            `mapstructure:"command" json:"command,omitempty"`
 	WorkingDirectory string            `mapstructure:"working-dir" json:"working-dir,omitempty"`
 	UserName         string            `mapstructure:"user" json:"user,omitempty"`

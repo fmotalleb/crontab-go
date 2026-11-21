@@ -143,6 +143,23 @@
             "@yearly"
           ]
         },
+        "crontab": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Apply legacy crontab scheduling to the cron expression.",
+          "properties": {
+            "time-zone": {
+              "type": "string",
+              "description": "The CRON_TZ zoneinfo name for this schedule."
+            },
+            "random-delay": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1440,
+              "description": "Upper limit for the fixed random startup delay in minutes."
+            }
+          }
+        },
         "interval": {
           "type": "string",
           "description": "A string that represents the interval at which the job should be executed. (enables interval)",
@@ -374,6 +391,26 @@
         "env": {
           "$ref": "#/definitions/Map",
           "description": "An Env object that defines the environment variables for the task."
+        },
+        "crontab": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Apply legacy crontab execution to a local command.",
+          "properties": {
+            "environment": {
+              "type": "array",
+              "items": {"type": "string", "pattern": "^[^=]+="},
+              "description": "Literal, case-sensitive NAME=value assignments for the command."
+            },
+            "stdin": {
+              "type": "string",
+              "description": "Literal standard input from the crontab percent syntax."
+            },
+            "quiet": {
+              "type": "boolean",
+              "description": "Suppress the command start log. Requires root."
+            }
+          }
         },
         "vars": {
           "$ref": "#/definitions/Map",

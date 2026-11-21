@@ -2,7 +2,12 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
+	"os/user"
+	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -20,6 +25,7 @@ func (t *Task) Validate(log *zap.Logger) error {
 	log.Debug("begin validation")
 	checkList := []func(*Task, *zap.Logger) error{
 		validateActionsList,
+		validateCrontabCommand,
 		validateCredential,
 		validateFields,
 		validateGetRequest,
@@ -111,6 +117,9 @@ func validateFields(t *Task, log *zap.Logger) error {
 }
 
 func validateCredential(t *Task, log *zap.Logger) error {
+	if t.Crontab != nil {
+		return nil // Checked by validateCrontabCommand.
+	}
 	// Only validate host credentials for tasks that execute locally
 	if len(t.Connections) > 0 {
 		hasLocal := false
@@ -151,6 +160,54 @@ func validateActionsList(t *Task, log *zap.Logger) error {
 		)
 		log.Warn("Validation failed for Task", zap.Error(err))
 		return err
+	}
+	return nil
+}
+
+func validateCrontabCommand(t *Task, _ *zap.Logger) error {
+	if t.Crontab == nil {
+		return nil
+	}
+	if t.Command == "" {
+		return errors.New("crontab command settings require a command")
+	}
+	if os.Geteuid() < 0 {
+		return errors.New("legacy crontab execution requires Unix")
+	}
+	for _, connection := range t.Connections {
+		if !connection.Local || connection.ImageName != "" || connection.ContainerName != "" || connection.ContainerLabel != "" {
+			return errors.New("crontab command settings require a local connection")
+		}
+	}
+	for _, assignment := range t.Crontab.Environment {
+		name, _, ok := strings.Cut(assignment, "=")
+		if !ok || name == "" || strings.ContainsRune(assignment, 0) {
+			return errors.New("crontab environment entries must be NAME=value")
+		}
+	}
+	if t.Crontab.Quiet && os.Geteuid() != 0 {
+		return errors.New("a leading '-' in a crontab entry requires root")
+	}
+	return validateCrontabAccount(t)
+}
+
+func validateCrontabAccount(t *Task) error {
+	if t.UserName != "" {
+		account, err := user.Lookup(t.UserName)
+		if err != nil {
+			return fmt.Errorf("resolve crontab user %q: %w", t.UserName, err)
+		}
+		if uid := os.Geteuid(); uid != 0 && account.Uid != strconv.Itoa(uid) {
+			return fmt.Errorf("switching to crontab user %q requires root", t.UserName)
+		}
+	}
+	if t.GroupName != "" {
+		if os.Geteuid() != 0 {
+			return errors.New("setting a crontab group requires root")
+		}
+		if _, err := user.LookupGroup(t.GroupName); err != nil {
+			return fmt.Errorf("resolve crontab group %q: %w", t.GroupName, err)
+		}
 	}
 	return nil
 }

@@ -149,7 +149,7 @@ func (s *JobEvent) Validate(log *zap.Logger) error {
 		err := fmt.Errorf("received a negative time in interval: `%v`", s.Interval)
 		log.Warn("Validation failed for JobEvent", zap.Error(err))
 		return err
-	} else if _, err := DefaultCronParser.Parse(s.Cron); s.Cron != "" && err != nil {
+	} else if err := s.validateCronEvent(); err != nil {
 		log.Warn("Validation failed for JobEvent", zap.Error(err))
 		return err
 	} else if s.Docker != nil {
@@ -237,6 +237,16 @@ func dockerValidation(s *JobEvent, log *zap.Logger) error {
 		err := fmt.Errorf("received a negative throttle value: `%v`", s.Docker.ErrorThrottle)
 		log.Warn("Validation failed for docker, throttling value error", zap.Error(err))
 		return err
+	}
+	return nil
+}
+
+func (s JobEvent) validateCronEvent() error {
+	if s.Cron != "" {
+		return s.ValidateCron()
+	}
+	if s.Crontab != nil {
+		return errors.New("crontab timing requires a cron expression")
 	}
 	return nil
 }

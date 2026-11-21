@@ -1,40 +1,52 @@
 package parser
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
 	"strings"
 )
 
-type cronLine struct {
-	string
-}
+var envAssignment = regexp.MustCompile(`^(?:"([^"=]+)"|'([^'=]+)'|([^"'= \t]+))[ \t]*=(.*)$`)
 
-var envRegex = regexp.MustCompile(`^(?<key>[\w\d_]+)=(?<value>.*)$`)
-
-func (l cronLine) exportEnv() (map[string]string, error) {
-	match := envRegex.FindStringSubmatch(l.string)
-	answer := make(map[string]string)
-	switch len(match) {
-	case 0:
-	case 3:
-		answer[match[1]] = match[2]
-	default:
-		return nil, fmt.Errorf("unexpected response from environment parser for line:\n%s", l.string)
+func parseEnvironment(line string) (name, value string, assignment bool, err error) {
+	match := envAssignment.FindStringSubmatch(line)
+	if match == nil {
+		return "", "", false, nil
 	}
-	if len(answer) != 1 && len(strings.Trim(l.string, " \n\t")) != 0 {
-		return nil, fmt.Errorf("line cannot be parsed as environment:\n%s", l.string)
-	}
-	return answer, nil
-}
-
-func (l cronLine) exportSpec(regex *regexp.Regexp, env map[string]string, parser cronSpecParser) (*cronSpec, error) {
-	match := regex.FindStringSubmatch(l.string)
-	if len(match) < 1 {
-		if len(strings.Trim(l.string, " \n\t")) == 0 {
-			return nil, nil
+	name = match[1] + match[2] + match[3]
+	value = strings.TrimSpace(match[4])
+	if value != "" && (value[0] == '\'' || value[0] == '"') {
+		end := strings.IndexByte(value[1:], value[0]) + 1
+		if end == 0 || end != len(value)-1 {
+			return "", "", false, errors.New("expected a matching quote at the end of the environment value")
 		}
-		return nil, fmt.Errorf("cannot parse this non-empty line as cron specification: %s", l.string)
+		value = value[1:end]
 	}
-	return parser(match, env), nil
+	return name, value, true, nil
+}
+
+// splitCommand removes cron escapes and separates the shell command from its stdin.
+func splitCommand(line string) (string, string) {
+	var command, input strings.Builder
+	dst := &command
+	for i := 0; i < len(line); i++ {
+		switch {
+		case line[i] == '\\' && i+1 < len(line):
+			i++
+			if line[i] != '%' {
+				dst.WriteByte('\\')
+			}
+			dst.WriteByte(line[i])
+		case line[i] != '%':
+			dst.WriteByte(line[i])
+		case dst == &command:
+			dst = &input
+		default:
+			input.WriteByte('\n')
+		}
+	}
+	if data := input.String(); data != "" && !strings.HasSuffix(data, "\n") {
+		input.WriteByte('\n')
+	}
+	return command.String(), input.String()
 }
