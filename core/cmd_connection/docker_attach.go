@@ -100,8 +100,10 @@ func (d *DockerAttachConnection) Connect() error {
 	return nil
 }
 
-// Execute runs the command in the Docker container and streams its output to the provided writer.
-// It creates an exec instance and attaches to it.
+// Execute runs the prepared command in the named container, or in the single
+// running container matching the configured label, and streams stdout and stderr
+// to their respective writers. It waits for completion and returns errors from
+// container selection, Docker operations, output copying, or a nonzero exit status.
 func (d *DockerAttachConnection) Execute(stdout, stderr io.Writer) error {
 	cid := d.conn.ContainerName
 	if cid == "" {
@@ -163,6 +165,8 @@ func (d *DockerAttachConnection) Execute(stdout, stderr io.Writer) error {
 	return checkDockerExitStatus("docker exec "+exec.ID, int64(inspect.ExitCode))
 }
 
+// waitForExec waits for execID to stop and returns its final inspection result.
+// It returns a wrapped inspection error or ctx.Err() if waiting is canceled.
 func waitForExec(ctx context.Context, cli *client.Client, execID string) (container.ExecInspect, error) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()

@@ -51,7 +51,9 @@ func NewInterval(schedule time.Duration, logger *zap.Logger) abstraction.EventGe
 	}
 }
 
-// BuildTickChannel implements abstraction.Scheduler.
+// BuildTickChannel dispatches ticks at the configured interval until the global
+// context is canceled, then stops the ticker. Calling it again after a ticker
+// has been created terminates the process; a nonpositive interval panics.
 func (c *Interval) BuildTickChannel(ed abstraction.EventDispatcher) {
 	if c.ticker != nil {
 		c.logger.Fatal("already built the ticker channel")

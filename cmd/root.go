@@ -56,9 +56,10 @@ within your containerized applications.`,
 		l := global.Logger("cron")
 		l.Info("Booting up")
 
+		// gotel reads the observability configuration from the first option.
 		otelResult, otelErr := gotel.Setup(global.CTX(),
-			gotel.WithVersion(git.String()),
 			gotel.WithConfig(CFG.Observability),
+			gotel.WithVersion(git.String()),
 			gotel.WithLogger(l),
 		)
 		if otelErr != nil {
@@ -160,6 +161,9 @@ func warnOnErr(err error, message string) {
 	}
 }
 
+// initConfig loads CFG from the selected configuration file and environment,
+// applies defaults, and validates it. It returns wrapped errors from reading,
+// unmarshaling, applying defaults, or validation.
 func initConfig() error {
 	setupEnv()
 
@@ -185,6 +189,7 @@ func initConfig() error {
 	return nil
 }
 
+// setupEnv binds webserver environment aliases and enables automatic environment lookup.
 func setupEnv() {
 	warnOnErr(
 		viper.BindEnv(

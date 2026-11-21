@@ -24,6 +24,8 @@ func init() {
 	tg.Register(NewPost)
 }
 
+// NewPost creates a POST task with the configured retry and timeout settings.
+// It returns nil, false when no POST URL is configured.
 func NewPost(logger *zap.Logger, task *config.Task) (abstraction.Executable, bool) {
 	if task.Post == "" {
 		return nil, false
@@ -57,7 +59,11 @@ type Post struct {
 	log     *zap.Logger
 }
 
-// Do implements common.Action.
+// Do sends one POST request with JSON task data, headers, and the task timeout,
+// writing the response body to stderr with an execution prefix. Cancel can
+// interrupt the request. It returns JSON encoding, request construction, transport,
+// response copying, or HTTP status errors for responses of 400 or higher, and
+// converts recovered panics to errors. Response body close errors are ignored.
 func (p *Post) Do(ctx context.Context) (e error) {
 	execID := newExecutionID()
 	ctx = populateVars(ctx, p.task)

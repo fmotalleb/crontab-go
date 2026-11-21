@@ -46,6 +46,8 @@ func (t *Task) Validate(log *zap.Logger) error {
 	return nil
 }
 
+// validateRetry returns an error if any retry delay, timeout, maximum delay,
+// or jitter is negative. Zero values are allowed.
 func validateRetry(t *Task, log *zap.Logger) error {
 	for name, duration := range map[string]time.Duration{
 		"retry delay":     t.RetryDelay,

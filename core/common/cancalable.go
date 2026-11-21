@@ -9,12 +9,16 @@ type Cancelable struct {
 	nextID uint64
 }
 
+// SetCancel replaces the callback invoked by every Cancel call.
+// A nil callback disables it without affecting registered execution callbacks.
 func (c *Cancelable) SetCancel(cancel func()) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.cancel = cancel
 }
 
+// Cancel invokes the current SetCancel callback and removes and invokes all
+// execution callbacks registered at the time of the call.
 func (c *Cancelable) Cancel() {
 	c.mu.Lock()
 	cancel := c.cancel
@@ -30,6 +34,7 @@ func (c *Cancelable) Cancel() {
 }
 
 // RegisterCancel adds one active execution cancellation and returns its unregister function.
+// Unregistering removes the callback without invoking it.
 func (c *Cancelable) RegisterCancel(cancel func()) func() {
 	c.mu.Lock()
 	if c.active == nil {

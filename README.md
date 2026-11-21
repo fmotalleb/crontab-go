@@ -58,7 +58,7 @@ Crontab-go supports exporting traces, metrics, and logs to an OTLP-compatible co
 
 **Web event endpoint:**
 
-When the web server is enabled, configure both `webserver_username` and `webserver_password` for Basic authentication. Unauthenticated access is disabled by default; set `webserver_allow_unauthenticated: true` only when the server is reachable exclusively on a trusted network or behind a TLS proxy. Event triggers accept `POST` requests at `/events/<event-name>/emit`. At most 64 event dispatch requests run concurrently; excess requests receive HTTP 429.
+When the web server is enabled, configure both `webserver_username` and `webserver_password` for Basic authentication. Unauthenticated access is disabled by default; set `webserver_allow_unauthenticated: true` only when the server is reachable exclusively on a trusted network or the proxy enforces caller authentication. Event triggers accept `POST` requests at `/events/<event-name>/emit`. A successful response confirms scheduling; listeners run independently. At most 64 event dispatches remain in progress concurrently, with capacity held until all listener callbacks return; excess requests receive HTTP 429.
 
 Environment variables:
 

@@ -7,10 +7,9 @@ import (
 	"github.com/fmotalleb/go-tools/log"
 )
 
-// Validate checks the validity of the Config struct.
-// It ensures that the log format and log level are valid, and all jobs within the config are also valid.
-// If any validation fails, it returns an error with the specific validation error.
-// Otherwise, it returns nil.
+// Validate checks webserver settings and jobs, rejecting nil jobs and duplicate
+// nonempty job names, including names of disabled jobs. It returns the first
+// configuration or job validation error, or nil when all checks pass.
 func (cfg *Config) Validate() error {
 	log := log.NewBuilder().FromEnv().MustBuild().Named("Config.Validator")
 
@@ -38,6 +37,10 @@ func (cfg *Config) Validate() error {
 	return nil
 }
 
+// validateWebserverConfig skips checks when no address is set. Otherwise it
+// requires a port in 1-65535 and either both credentials or empty credentials
+// with explicit permission for unauthenticated access. It returns an error for invalid settings;
+// passwords shorter than eight bytes are allowed.
 func validateWebserverConfig(cfg *Config) error {
 	log := log.NewBuilder().FromEnv().MustBuild()
 	if cfg.WebServerAddress == "" {

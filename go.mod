@@ -1,6 +1,6 @@
 module github.com/fmotalleb/crontab-go
 
-go 1.27.0
+go 1.27.4
 
 tool (
 	github.com/client9/misspell/cmd/misspell
@@ -14,7 +14,7 @@ require (
 	github.com/fmotalleb/go-tools v0.1.81
 	github.com/fmotalleb/gotel v0.1.0
 	github.com/joho/godotenv v1.5.1
-	github.com/labstack/echo/v4 v4.16.2
+	github.com/labstack/echo/v4 v4.16.6
 	github.com/maniartech/signals v1.3.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/robfig/cron/v3 v3.0.1

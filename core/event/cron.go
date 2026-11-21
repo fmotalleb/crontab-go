@@ -54,7 +54,9 @@ func NewCron(schedule string, c *cron.Cron, logger *zap.Logger) abstraction.Even
 	return cron
 }
 
-// BuildTickChannel implements abstraction.Scheduler.
+// BuildTickChannel dispatches cron ticks until the global context is canceled,
+// then removes the scheduled entry. An invalid schedule causes an immediate return.
+// Calling it again after an entry has been scheduled terminates the process.
 func (c *Cron) BuildTickChannel(ed abstraction.EventDispatcher) {
 	if c.entry != nil {
 		c.logger.Fatal("already built the ticker channel")
@@ -100,6 +102,7 @@ type cronJob struct {
 	notify    chan<- abstraction.Event
 }
 
+// Run delivers one cron event, waiting for a receiver or context cancellation.
 func (j *cronJob) Run() {
 	j.logger.Debug("cron tick received")
 	select {

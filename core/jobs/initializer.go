@@ -21,6 +21,8 @@ func initEventSignal(ed abstraction.EventDispatcher, events []abstraction.EventG
 	logger.Debug("signals initialized")
 }
 
+// initTasks builds the job's tasks, done hooks, and failure hooks, in that return order.
+// A build failure returns three nil slices and a wrapped task or hook build error.
 func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executable, []abstraction.Executable, []abstraction.Executable, error) {
 	tasks := make([]abstraction.Executable, 0, len(job.Tasks))
 	doneHooks := make([]abstraction.Executable, 0, len(job.Hooks.Done))
@@ -55,6 +57,8 @@ func initTasks(job config.JobConfig, logger *zap.Logger) ([]abstraction.Executab
 	return tasks, doneHooks, failHooks, nil
 }
 
+// initEvents builds the job's event generators in configuration order.
+// It returns nil and a wrapped event build error if any event cannot be built.
 func initEvents(job config.JobConfig, logger *zap.Logger) ([]abstraction.EventGenerator, error) {
 	events := make([]abstraction.EventGenerator, 0, len(job.Events))
 	for _, sh := range job.Events {

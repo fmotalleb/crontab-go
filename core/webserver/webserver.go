@@ -33,8 +33,6 @@ type WebServer struct {
 	serveMetrics bool
 }
 
-const maxConcurrentEventRequests = 64
-
 func NewWebServer(ctx context.Context,
 	address string,
 	port uint,
@@ -51,6 +49,10 @@ func NewWebServer(ctx context.Context,
 	}
 }
 
+// newEngine configures event and metrics routes with a 1 MB request body limit.
+// All routes require Basic authentication unless unauthenticated access is
+// explicitly allowed with both credentials empty; other configurations yield 401.
+// Event dispatch accepts POST and returns 429 when 64 dispatch requests are active.
 func (s *WebServer) newEngine() *echo.Echo {
 	engine := echo.New()
 
@@ -100,20 +102,8 @@ func (s *WebServer) newEngine() *echo.Echo {
 		middleware.Recover(),
 	)
 
-	ed := &endpoint.EventDispatchEndpoint{}
-	dispatchSlots := make(chan struct{}, maxConcurrentEventRequests)
-	engine.POST(
-		"/events/:event/emit",
-		func(c echo.Context) error {
-			select {
-			case dispatchSlots <- struct{}{}:
-				defer func() { <-dispatchSlots }()
-				return ed.Endpoint(c)
-			default:
-				return c.String(http.StatusTooManyRequests, "too many event dispatch requests")
-			}
-		},
-	)
+	ed := endpoint.NewEventDispatchEndpoint()
+	engine.POST("/events/:event/emit", ed.Endpoint)
 	if s.serveMetrics {
 		engine.GET("/metrics", func(c echo.Context) error {
 			promhttp.Handler().ServeHTTP(c.Response().Writer, c.Request())
@@ -130,6 +120,10 @@ func (s *WebServer) newEngine() *echo.Echo {
 	return engine
 }
 
+// Serve listens for HTTP requests until the server stops or s.ctx is canceled.
+// On cancellation it attempts graceful shutdown with a ten-second timeout.
+// It wraps listen and serve errors, treating cancellation during listen and
+// http.ErrServerClosed as success. Shutdown errors are not returned.
 func (s *WebServer) Serve() error {
 	engine := s.newEngine()
 	addr := fmt.Sprintf("%s:%d", s.address, s.port)

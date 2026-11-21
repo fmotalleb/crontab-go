@@ -55,7 +55,11 @@ type Command struct {
 	log  *zap.Logger
 }
 
-// Do implements common.Action.
+// Do runs one attempt of the command on each configured connection in order,
+// using a local connection when none are configured. It applies the task timeout
+// and supports cancellation through Cancel. It returns connection selection,
+// preparation, connection, or execution errors and converts recovered panics to
+// errors. Disconnect errors are ignored.
 func (c *Command) Do(ctx context.Context) (e error) {
 	execID := newExecutionID()
 	ctx, span := taskTracer.Start(

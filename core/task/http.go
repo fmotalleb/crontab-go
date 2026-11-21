@@ -13,13 +13,14 @@ import (
 	"github.com/fmotalleb/crontab-go/helpers"
 )
 
-// newHTTPClient builds an http.Client, optionally skipping TLS certificate verification.
 var (
 	httpClientsOnce sync.Once
 	verifiedClient  *http.Client
 	insecureClient  *http.Client
 )
 
+// newHTTPClient returns a shared client with pooled connections.
+// insecure selects the client that skips TLS certificate verification.
 func newHTTPClient(insecure bool) *http.Client {
 	httpClientsOnce.Do(func() {
 		verifiedTransport := http.DefaultTransport.(*http.Transport).Clone()
@@ -44,6 +45,8 @@ func CloseHTTPIdleConnections() {
 	}
 }
 
+// redactedURL returns only the URL scheme and host, including any port.
+// It returns "<invalid-url>" if parsing fails or the scheme or host is missing.
 func redactedURL(address string) string {
 	parsed, err := url.Parse(address)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {

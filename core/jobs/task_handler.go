@@ -25,6 +25,8 @@ type taskTracker struct {
 	stopped bool
 }
 
+// start registers an active execution unless shutdown has begun.
+// A true result must be paired with one call to done.
 func (t *taskTracker) start() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -35,16 +37,20 @@ func (t *taskTracker) start() bool {
 	return true
 }
 
+// done marks one registered execution, including its hooks, as finished.
 func (t *taskTracker) done() {
 	t.wg.Done()
 }
 
+// stop permanently prevents new executions from being registered.
 func (t *taskTracker) stop() {
 	t.mu.Lock()
 	t.stopped = true
 	t.mu.Unlock()
 }
 
+// stopAndWait prevents new registrations and waits for active executions.
+// It returns nil when they finish or ctx.Err() if the wait is canceled.
 func (t *taskTracker) stopAndWait(ctx context.Context) error {
 	t.stop()
 	done := make(chan struct{})
@@ -65,7 +71,9 @@ var (
 	trackers   []*taskTracker
 )
 
-// WaitForShutdown prevents new task launches and waits for active tasks and hooks.
+// WaitForShutdown prevents new task launches for currently registered handlers
+// and waits for their active tasks and hooks. It returns ctx.Err() if waiting is
+// canceled; active work is not canceled by this function.
 func WaitForShutdown(ctx context.Context) error {
 	trackersMu.Lock()
 	active := append([]*taskTracker(nil), trackers...)
@@ -81,6 +89,9 @@ func WaitForShutdown(ctx context.Context) error {
 	return nil
 }
 
+// taskHandler registers a listener that launches tasks with event metadata and
+// a separate copy of variables for each execution. Dispatch waits for concurrency
+// slots and stops launching when the event context is canceled or shutdown begins.
 func taskHandler(
 	logger *zap.Logger,
 	ed abstraction.EventDispatcher,
@@ -117,6 +128,9 @@ func taskHandler(
 	})
 }
 
+// executeTask runs a task and then the job's failure or done hooks according to
+// its result, ignoring hook errors. It recovers task and hook panics and releases
+// the caller's acquired pool slot and tracker registration on return.
 func executeTask(
 	c context.Context,
 	task abstraction.Executable,

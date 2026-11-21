@@ -17,6 +17,11 @@ import (
 	"github.com/fmotalleb/crontab-go/core/global"
 )
 
+// InitializeJobs validates and starts enabled jobs, defaulting zero concurrency
+// to one in the supplied configurations. variables supplies shared template
+// values copied into each task execution's context. It returns wrapped validation,
+// concurrency pool, task, hook, or event build errors. Jobs already started remain
+// active if initializing a later job fails.
 func InitializeJobs(jobs []*config.JobConfig, variables map[string]string) error {
 	log := global.Logger("Cron")
 	for _, job := range jobs {
@@ -73,6 +78,8 @@ func InitializeJobs(jobs []*config.JobConfig, variables map[string]string) error
 	return nil
 }
 
+// buildSignal builds and starts the job's event generators for ed.
+// It returns the event build error without starting generators if building fails.
 func buildSignal(ed abstraction.EventDispatcher, job config.JobConfig, logger *zap.Logger) error {
 	events, err := initEvents(job, logger)
 	if err != nil {

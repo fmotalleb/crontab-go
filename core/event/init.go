@@ -33,7 +33,7 @@ func newInitGenerator(_ *zap.Logger, cfg *config.JobEvent) (abstraction.EventGen
 
 type Init struct{}
 
-// BuildTickChannel implements abstraction.Scheduler.
+// BuildTickChannel emits one init event using the global context and returns.
 func (c *Init) BuildTickChannel(ed abstraction.EventDispatcher) {
 	ctx := global.CTX()
 	ed.Emit(ctx, NewMetaData("init", map[string]any{}))
